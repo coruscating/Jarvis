@@ -1,0 +1,20 @@
+<script type="text/javascript">
+
+function IonPumpReceivedData(input){ 
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+    for (var key in data2){
+        if(data2.hasOwnProperty(key) && !($('#' + key).is(":focus"))){
+            $('#' + key).val(data2[key]);       
+        }
+    }
+
+}
+</script>
+<table width=100% class="datatable">
+<tr>
+<td>Pump Pressure:</td><td><input id="IonPumpPressure" value="0" style="display: inline;" type=text readonly></td></tr><tr>
+<td>Pump Current:</td><td><input id="IonPumpCurrent" value="0" style="display: inline;" type=text readonly></td>
+</tr>
+</table>
+</center>

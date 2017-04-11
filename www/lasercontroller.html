@@ -1,0 +1,106 @@
+<script type="text/javascript">
+$(function () {    
+    $('.LaserControllerField').spinner({
+        numberFormat: "n",
+        step: 0.01,
+        stop: function(){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                WebSocketSend("SET;LaserController;" + this.id + " " + this.value); 
+                return true;
+            }
+        }
+    });
+    
+    $('#DAC0offset').spinner({
+        min: 0,
+        step: 0.0005,
+        max: 10.0
+    });
+    
+    $('#DAC0amp').spinner({
+        min: -10.0,
+        max: 10.0,
+        step: 0.1
+    });
+    
+    $('#DAC0period').spinner({
+        min: 0.0,
+        max: 10000.0
+    });
+    $('#DAC3offset').spinner({
+        min: 0,
+        step: 0.002,
+        max: 10.0
+    });
+    
+    $('#DAC3amp').spinner({
+        min: -10.0,
+        step: 0.1,
+        max: 10.0
+    });
+    
+    $('#DAC3period').spinner({
+        min: 0.0,
+        step: 1,
+        max: 10000.0
+    });
+
+     $("#DAC0wave").on('change', function(){
+        WebSocketSend("SET;LaserController;DAC0wave " + $("#DAC0wave").val()); 
+     });
+     $("#DAC3wave").on('change', function(){
+        WebSocketSend("SET;LaserController;DAC3wave " + $("#DAC3wave").val()); 
+     });
+    
+});
+
+// this is for both 844 and 1092 lasers and ADCs
+function LaserControllerReceivedData(input){ 
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+    for (var key in data2){
+        // don't update if mouse is over element, except always update ADCs
+         if(data2.hasOwnProperty(key) && (key.lastIndexOf('ADC',0) === 0 || !($('#' + key).is(":focus")) )){
+            $('#' + key).val(parseFloat(data2[key]).toFixed(4));
+        }
+        if(key=='DAC0wave' || key=='DAC3wave'){
+            $('#' + key).val(data2[key]);
+        }
+    }
+
+
+}
+</script><center>
+<table width=95% class="datatable">
+<tr><th colspan=4>DAC0 1092</th></tr><tr><td>
+<label for="DAC0wave">Wave:</label></td><td>
+<select id="DAC0wave">
+<option value="0">DCV
+<option value="1">TRI
+</select>
+</td>
+<td><label for="DAC0offset">Offset:</label></td><td><input id="DAC0offset" class="LaserControllerField" value="0" style="display: inline;"></td>
+</tr><tr><td><label for="DAC0amp">Amp:</label></td><td><input id="DAC0amp" class="LaserControllerField" value="0" style="display: inline;"></td>
+<td><label for="DAC0period">Period:</label></td><td><input id="DAC0period" class="LaserControllerField" value="0" style="display: inline;"></td>
+</tr></table><hr><table width=95% class="datatable">
+<tr><th colspan=4>DAC3 844</th></tr><tr><td>
+<label for="DAC3wave">Wave:</label></td><td>
+<select id="DAC3wave">
+<option value=0>DCV
+<option value=1>TRI
+</select>
+</td>
+<td><label for="DAC3offset">Offset:</label></td><td><input id="DAC3offset" class="LaserControllerField" value="0" style="display: inline;"></td>
+</tr><tr><td><label for="DAC3amp">Amp:</label></td><td><input id="DAC3amp" class="LaserControllerField" value="0" style="display: inline;"></td>
+<td><label for="DAC3period">Period:</label></td><td><input id="DAC3period" class="LaserControllerField" value="0" style="display: inline;"></td>
+</tr></table><hr><table width=95% class="datatable">
+<tr><td>
+<label for="ADC0val">ADC0:</label></td><td><input id="ADC0val" value="0.00" readonly type=text>
+</td><td>
+<label for="ADC1val">ADC1:</label></td><td><input id="ADC1val" value="0.00" readonly type=text>
+</td></tr><tr><td>
+<label for="ADC2val">ADC2:</label></td><td><input id="ADC2val" value="0.00" readonly type=text>
+</td><td>
+<label for="ADC3val">ADC3:</label></td><td><input id="ADC3val" value="0.00" readonly type=text>
+</td></tr>
+</table></center>

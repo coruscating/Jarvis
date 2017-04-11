@@ -1,0 +1,392 @@
+<script type="text/javascript">
+$(function () {
+    ScriptInitialize();
+    
+    $("#ScriptTabs").tabs().addClass( "ui-tabs-vertical ui-helper-clearfix" );
+    $("#ScriptTabs li").removeClass( "ui-corner-top" ).addClass( "ui-corner-left" );
+
+    // dictionary holding all the running scripts
+    window.Scripts={};
+
+
+    $("#ScriptLoad").on('change', function(){
+        ScriptLoad();
+    });
+
+    // close icon: removing the tab on click, stop script if it's still running
+    $("#ScriptTabs").tabs().delegate( "span.ui-icon-close", "click", function() {
+        var scriptid = $( this ).closest( "li" ).remove().attr( "aria-controls" );
+        $("#" + Escape(scriptid)).remove();
+        $("#ScriptTabs").tabs( "refresh" );
+        scriptid = scriptid.split("Tab")[1];
+        if (scriptid in window.Scripts){
+            WebSocketSend("STOPSCRIPT;" + scriptid);
+        }
+    });
+
+    $("#ScriptRun").click(function(){
+        if (! checkWebSocket()){
+            return false;
+        }
+
+        // make script ID from timestamp
+        var curtime=new Date().getTime()/1000;
+        var scriptid=curtime.toString();
+
+        // get the user inputted variables
+        var RealScriptVars={};
+
+        $('.ScriptVars').each(function(){
+            RealScriptVars[$(this).attr('id')]=$(this).val();
+        });
+
+
+        // start a new tab for this script
+        $("#ScriptTabsList").append("<li class=ScriptTab id=ScriptTabLabel" + scriptid + "><a href='#ScriptTab"+ scriptid +"'>" + $("#ScriptLoad").val() + "</a><span class='ui-icon ui-icon-close' style='display: inline-block; vertical-align: middle;float: right;'></span></li>");
+        var tabdata="<div id=ScriptTab" + scriptid + ">" + "Parameters: " + JSON.stringify(RealScriptVars);
+        tabdata=tabdata + "<br>ID: " + scriptid + "<br>";
+        tabdata=tabdata + "<span id=ScriptStat" + scriptid + ">Status: Running since " + Timestamp(scriptid);
+        tabdata=tabdata + "<br><input type=button onclick='WebSocketSend(\"STOPSCRIPT;" + scriptid + "\");' value=Stop Script>"  + "</span>";
+        // add plot container if needed
+        if(ScriptPlot["Type"]!='none'){
+            tabdata=tabdata + "<br><div class=ScriptPlotContainer id='ScriptPlot" + scriptid + "' width=100%></div>";
+        }
+        tabdata=tabdata + "<div class=ScriptOutput id='ScriptOutput" + scriptid + "'></div></div>";
+
+        $("#ScriptTabs").append(tabdata);
+        $("#ScriptTabs").tabs("refresh");
+
+        log(PLOT, ScriptPlot["Type"]);
+
+        // initialize plot if needed
+        if (ScriptPlot["Type"]!='none'){
+            ScriptInitPlot(scriptid);
+        }
+
+
+
+        // add script to dictionary of scripts
+        window.Scripts[scriptid]={"ScriptName": $("#ScriptLoad").val(), "ScriptVars": RealScriptVars, "ScriptPlot": ScriptPlot};
+
+        // now finally start the script
+        WebSocketSend("SCRIPT;" + scriptid + ";" + $("#ScriptLoad").val() + ";" + JSON.stringify(RealScriptVars));
+    });
+});
+
+
+
+// load list of scripts
+function ScriptInitialize(){
+    var dir = "scripts/";
+    $("#ScriptLoad").empty();
+    $.ajax({
+        url: dir,
+        cache: false,
+        success: function (data) {
+            // hacky way to get file directory listing
+            $(data).find("a[href$=py]").each(function () {
+                var filename = decodeURIComponent(this.href.split('/').pop());
+                //log(ERROR, "adding " + filename);
+                $("#ScriptLoad").append("<option value='" + filename + "'>" + filename + "</option>");
+            });
+            // select first option by default
+            $("#ScriptLoad").val($("#ScriptLoad option:first").val());
+            // have to run script load here because ajax is asynchronous--doesn't finish before function finishes
+            ScriptLoad();
+        }
+    });
+}
+
+// run the .js file associated with each script
+function ScriptLoad(){
+    ScriptVars={};
+    ScriptText='';
+    ScriptPlot={};
+    ScriptPlot["Type"]='none';
+    $.getScript("scripts/" + $("#ScriptLoad").val().split(".")[0] + ".js", function(){
+        var scriptcontent="";
+        for (var key in ScriptVars){
+            if (typeof ScriptVars[key] !== "object"){ // textbox
+                scriptcontent=scriptcontent + key + ": <input class=ScriptVars id=" + key + " value=" + ScriptVars[key] + "><br>";
+            } else { // dropdown
+                scriptcontent=scriptcontent + key + ": <select class=ScriptVars id=" + key + ">";
+                    $.each(ScriptVars[key], function(key2, value) {
+                        scriptcontent=scriptcontent + "<option value='" + value + "'>" + key2 + "</option>";
+                    });
+                scriptcontent=scriptcontent + "</select><br>";
+            }
+        }
+        $('#ScriptOptions').html(scriptcontent);
+        $('#ScriptText').html(ScriptText);
+    });
+}
+
+
+
+// make the plot for a script, if needed
+function ScriptInitPlot(scriptid){
+    delete window.baseline;
+    if(ScriptPlot["Type"]=='heat'){
+        $('#ScriptPlot' + Escape(scriptid)).highcharts({
+            chart: {
+                type: 'heatmap',
+                backgroundColor:'transparent'
+            },
+              
+            title:{
+                text:''
+            },
+
+            colorAxis: {
+                min: 0,
+                max: 100,
+                
+                stops: [
+                    [0, '#3060cf'],
+                    [0.5, '#fffbbc'],
+                    [0.9, '#c4463a']
+                ]
+            },
+            
+            series: [{
+                data: []
+            }]
+             
+        });
+        delete window.plotwidth;
+        delete window.x1;
+    } else if(ScriptPlot["Type"]=='2d'){
+        $('#ScriptPlot' + Escape(scriptid)).highcharts({
+            chart: {
+                type: 'scatter',
+                backgroundColor:'transparent',
+                animation: false,
+                zoomType: 'xy'
+            },
+
+            title:{
+                text:''
+            },
+
+            yAxis: {
+                title: {
+                    text: ScriptPlot["ioY"]
+                }
+            },
+
+            plotOptions:{
+                scatter:{
+                    lineWidth:2
+                }
+            },
+            navigation: {
+                buttonOptions: {
+                    theme: {
+                       'stroke-width': 1,
+                        stroke: 'silver'
+                    }
+                }
+            },
+            series: [{
+                data: [],
+                name: ScriptPlot["ioY"]
+            }]
+         
+        });
+        if(typeof ScriptPlot["ioY2"] !== 'undefined'){
+            log(ERROR, ScriptPlot["ioY2"]);
+            var chart=$('#ScriptPlot' + Escape(scriptid)).highcharts()
+            chart.addAxis({
+                id: 'plotioy2-axis',
+                opposite: true,
+                title: {
+                    text: ScriptPlot["ioY2"]
+                } 
+            });
+            chart.addSeries({
+                type: "scatter",
+                name: ScriptPlot["ioY2"],
+                data: [],
+                yAxis: 'plotioy2-axis'
+            });
+
+        }       
+    }
+}
+
+// update script output
+function ScriptOutput(id, output){
+    log(ERROR, "#ScriptOutput" + escape(id));
+    $("#ScriptOutput" + escape(id)).html(output);
+}
+
+// change script status and delete from dictionary
+function ScriptStopped(input){
+    var scriptid = input.split(";")[1];
+    $('#ScriptStat' + Escape(scriptid)).html("Status: Stopped");
+    delete window.Scripts[scriptid];
+    // change tab color so we know which scripts have stopped
+    $('#ScriptTabLabel' + Escape(scriptid)).css({'background-color': '#cd6d5b'});
+}
+
+// close the tabs that have finished running
+function ScriptCloseTabs(input){
+    $(".ScriptTab").each(function(){
+        var id=$(this).attr('id').replace("ScriptTabLabel","");
+        if(! (id in window.Scripts)){
+            $("#ScriptTab" + Escape(id)).remove();
+            $(this).remove();
+            $("#ScriptTabs").tabs( "refresh" );
+        }
+    });
+}
+
+function ScriptReceivedData(input){
+    var string = input.split(";");
+    log(PLOT, input);
+    // deal with pulse programmer script separately
+    if(string[0].indexOf("SPECIALREQUESTSCRIPT")==0){
+        var scriptid=string[0].replace("SPECIALREQUESTSCRIPT","");
+        var data2=JSON.parse(string[3]);
+        var graph=data2['READOUT'];
+        var endele=graph.length-1;
+        for(var i=endele;i>=0;i--){ // trim all the zeros at end of data
+            if(graph[i][1]==0){
+               endele--; 
+            } else {
+                break;
+            }
+        }
+        graph=graph.slice(0,endele+1);
+        var unit=parseFloat(window.Scripts[scriptid].ScriptVars['stepsize']);
+        var offset=parseFloat(window.Scripts[scriptid].ScriptVars['offset']);
+        for (i=0;i<graph.length;i++){
+            graph[i][0]=parseFloat(graph[i][0])*unit+offset;
+        }
+        var chart=$('#ScriptPlot' + Escape(scriptid)).highcharts();
+        chart.series[0].update({
+            data: graph
+        });
+        
+        // log the stuff
+        var header=window.Scripts[scriptid].ScriptName;
+        var header2=header.split(".");
+
+        header=header + '\n' + JSON.stringify(window.Scripts[scriptid].ScriptVars);
+
+        $.ajax({
+            url: "logtofile.php",
+            type: "post",
+            data: { 
+                plotdata: header + '\n' + JSON.stringify(graph),
+                filename: 'SCRIPTDDSCON+' + header2[0] + "+" + scriptid
+            },
+            error:function(){
+                alert("failure");
+            }   
+        }); 
+
+    } else {
+
+    // crappy way to get plot ID with either PLOTSCRIPT2D or PLOTSCRIPTHEAT prefixes
+    var scriptid=string[0].replace("2D","");
+    var scriptid2=scriptid.replace(/[A-Z]/g, "");
+    scriptid=scriptid2.split("-")[0];
+
+    
+
+    if (! (scriptid in window.Scripts)){
+        log(PLOT, 'not in window');
+        return;
+    }
+
+    var chart=$('#ScriptPlot' + Escape(scriptid)).highcharts();
+    var ScriptPlotType=window.Scripts[scriptid].ScriptPlot["Type"];
+    var data2="";
+
+    //var series=window.Scripts[scriptid].series;
+
+
+        data2=JSON.parse(string[2]);
+
+        if(ScriptPlotType=='2d'){
+            var id1=scriptid2.split("-")[1];
+            var id2=scriptid2.split("-")[2];
+           if(typeof window.Scripts[scriptid].ScriptSeries=='undefined'){
+            window.Scripts[scriptid].ScriptSeries=id1;
+            //chart.series[0].update({name: window.baseline});
+            } else {
+               if(id1 != window.Scripts[scriptid].ScriptSeries){
+                   window.Scripts[scriptid].ScriptSeries=id1;
+                   chart.addSeries({
+                        name: "Series " + id1,
+                        data: []
+                   });
+                }
+            }
+            chart.series[window.Scripts[scriptid].ScriptSeries].addPoint([parseFloat(data2[window.Scripts[scriptid].ScriptPlot["ioX"]]), parseFloat(data2[window.Scripts[scriptid].ScriptPlot["ioY"]])]);
+            if(typeof window.Scripts[scriptid].ScriptPlot["ioY2"] !== 'undefined'){
+                chart.series[1].addPoint([parseFloat(data2[window.Scripts[scriptid].ScriptPlot["ioX"]]), parseFloat(data2[window.Scripts[scriptid].ScriptPlot["ioY2"]])]);   
+            }
+
+           
+        } else if(ScriptPlotType=='heat'){
+            ioX=window.Scripts[scriptid].ScriptPlot["ioX"];
+            ioY=window.Scripts[scriptid].ScriptPlot["ioY"];
+            heatval=parseFloat(data2["MMAmp"]);
+            chart.series[0].addPoint([parseFloat(data2[ioX]), parseFloat(data2[ioY]),heatval]);
+
+            if (typeof window.plotwidth=='undefined'){
+                if(typeof window.x1=='undefined'){
+                    window.x1=parseFloat(data2[ioX]);
+                    window.y1=parseFloat(data2[ioY]);
+                } else {
+                    window.plotwidth=Math.abs(parseFloat(data2[ioX])-window.x1);
+                    window.plotheight=Math.abs(parseFloat(data2[ioY])-window.y1);
+                    chart.series[0].update({
+                        colsize: window.plotheight,
+                        rowsize: window.plotheight
+                    });
+                }
+            }
+
+            if (typeof window.chartmin==='undefined'){
+                window.chartmin = heatval;
+                window.chartmax = heatval;
+            }
+            
+            if (window.chartmin > heatval){
+                window.chartmin = heatval;
+            }
+            
+            if (window.chartmax < heatval){
+                window.chartmax = heatval;
+            }
+            
+            chart.colorAxis[0].update({
+                min: window.chartmin,
+                max: window.chartmax
+            });
+            chart.redraw();
+        }
+    }
+}
+
+</script>
+<div id="ScriptTabs" style="width:100%;height:100%;background:#f6f4ec;">
+    <ul id="ScriptTabsList">
+        <li><a href="#NewScript"><img src="images/plus.png"></a></li>
+        <li><a onclick="ScriptCloseTabs(); return false;"><img src="images/cross.png"></a></li>
+    </ul>
+    <div id="NewScript">
+        <select id="ScriptLoad"></select><img src='images/refresh.png' style='vertical-align:middle;height:1em;cursor:pointer;' onclick='ScriptInitialize();'>
+        <br><br>
+
+        <div id="ScriptOptions"></div>
+        <br>
+        <div id="ScriptText"></div><br>
+
+        <input type=button value='Run Script' id='ScriptRun'><br>
+    </div>
+
+</div>

@@ -1,0 +1,62 @@
+
+<script type="text/javascript">
+$(function () {
+
+    
+    window.idealfrequency=[739.40000, 650.50386, 274.58905, 444.77895, 290.21106, '355.48130', '', '367.49510'];
+    // if frequency deviates from ideal frequency above tolerance then alert is displayed
+    window.tolerance=[0.1, 0.00003, 0.0002, 0, 0.00002, 0.00003, 0, 0];
+   
+    var tablecontent = "<table width=100%><tr><td>Ch</td><td>Alarm</td><td>Measured</td><td>Ideal</td></tr>";
+    for(i=1;i<=8;i++){
+        tablecontent=tablecontent + "<tr><td width=50><h2><div id='WaveMeterChannelLabel" + i + "'> " + i + " </div></h2></td><td><input type=checkbox id=WaveMeterAlarm" + i + "></td>";
+        tablecontent=tablecontent + "<td><h2 id='WaveMeterChannel" + i + "'></h2></td>";
+        tablecontent=tablecontent + "<td><h2><font color=green>" + window.idealfrequency[i-1] + "</font></h2></td></tr>";
+    }
+    $('#WaveMeterFill').html(tablecontent + "</table>");
+
+});
+
+
+function WaveMeterReceivedData(input){
+    // message form: STATUS;1409688255.76;WaveMeter;{"WaveMeterChannel1": 1092.0, "WaveMeterChannel2": 0.0055}
+
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+    var bad=0;
+
+    for (var key in data2){
+        if(data2.hasOwnProperty(key)){
+        if (parseFloat(data2[key])<=100){
+            $('#' + key).html('No data');
+        } else{
+            $('#' + key).html(data2[key].toFixed(6));
+            channel = parseInt(key.replace("WaveMeterChannel",""));
+            if ((Math.abs(data2[key] - window.idealfrequency[channel-1]) > window.tolerance[channel-1]) && channel != 8){
+                if ($('#WaveMeterAlarm' + i).prop('checked')){
+                    $('#WaveMeterChannelLabel' + channel).effect("shake", {times: 1});
+                    $('#WavemeterDialog').css('background-color', 'salmon');
+                    bad=1;
+                }
+                
+            } 
+        }
+    }
+
+    }
+    
+        if(bad==0){
+            $('#WavemeterDialog').css('background-color', '#f6f4ec');
+        }    
+
+    
+}
+</script>
+
+
+
+<strong>
+<div id=WaveMeterFill></div>
+</strong>
+
+

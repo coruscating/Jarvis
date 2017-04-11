@@ -1,0 +1,245 @@
+<script type="text/javascript">
+
+var mode=1;
+
+$(function () {
+    LockInitialize();
+
+    $("#LockTabs").tabs().addClass( "ui-tabs-vertical ui-helper-clearfix" );
+    $("#LockTabs li").removeClass( "ui-corner-top" ).addClass( "ui-corner-left" );
+
+    // dictionary holding all the running scripts
+    window.Locks={};
+
+
+    $("#LockLoad").on('change', function(){
+        LockLoad();
+    });
+
+    // close icon: removing the tab on click, stop script if it's still running
+    $("#LockTabs").tabs().delegate( "span.ui-icon-close", "click", function() {
+        var lockid = $( this ).closest( "li" ).remove().attr( "aria-controls" );
+        $("#" + Escape(lockid)).remove();
+        $("#LockTabs").tabs( "refresh" );
+        lockid = lockid.split("Tab")[1];
+        if (lockid in window.Locks){
+            WebSocketSend("UNLOCK;" + lockid);
+        }
+    });
+
+
+    $('input').each(function(){
+        title=$(this).prop('title');
+        if (title != ''){
+          title = ': ' + title;
+        }
+        $(this).prop('title', + $(this).attr('id') + title);
+    });
+
+  //$( document ).tooltip({
+  //    track: true
+  //  });
+  $('.Lockspin').spinner();
+
+
+
+    $('.LockField').spinner({
+        width: 20,
+        numberFormat: "n",
+        step: 0.001
+    });
+
+    $(".LockActiveFields").change(function(){
+        WebSocketSend("LOCKUPDATE;" + lockid + ";" + $("#LockIO").val() + ";" + $("#LockToIO").val() + ";" + $("#Target").val() + ";" + $("#LockP").val() + ";" + $("#LockI").val() + ";" + $("#LockD").val() + ";" + $("#Interval").val() + ";" + $("#LockLimit").val());
+    })
+
+    $("#LockSubmit").click(function(){
+        // don't do anything if not connected to server
+        if (! checkWebSocket()){
+            return false;
+        }
+        var lockid=(new Date().getTime()/1000).toString();
+        window.Locks[lockid]={"LockIO":$("#LockIO").val()}; 
+        WebSocketSend("LOCK;" + lockid + ";" + $("#LockIO").val() + ";" + $("#LockToIO").val() + ";" + $("#Target").val() + ";" + $("#LockP").val() + ";" + $("#LockI").val() + ";" + $("#LockD").val() + ";" + $("#Interval").val() + ";" + $("#LockLimit").val());
+        // start a new tab for this script
+        $("#LockTabsList").append("<li class=LockTab id=LockTabLabel" + lockid + "><a href='#LockTab"+ lockid +"'>" + $("#LockLoad").val() + "</a><span class='ui-icon ui-icon-close' style='display: inline-block; vertical-align: middle;float: right;'></span></li>");
+        var tabdata="<div id=LockTab" + lockid + ">";
+        tabdata=tabdata + "<br>ID: " + lockid + "<br>";
+        tabdata=tabdata + "<span id=LockStat" + lockid + ">Status: Running since " + Timestamp(lockid);
+        tabdata=tabdata + "<br><input type=button onclick='WebSocketSend(\"UNLOCK;" + lockid + "\");' value=Stop Lock>"  + "</span>";
+        tabdata=tabdata + "<br>IO to lock:" + $("#LockIO").val();
+        tabdata=tabdata + "<br>Reference IO:" + $("#LockToIO").val();
+        tabdata=tabdata + "<br>P: <input class=LockActiveField value=" + $("#LockP").val() + ">";
+        tabdata=tabdata + "<br>I: <input class=LockActiveField value=" + $("#LockP").val() + ">";
+        tabdata=tabdata + "<br>D: <input class=LockActiveField value=" + $("#LockP").val() + ">";
+        tabdata=tabdata + "<div class=LockOutput id='LockOutput" + lockid + "'></div></div>";
+
+        $("#LockTabs").append(tabdata);
+        $("#LockTabs").tabs("refresh");
+
+        $('.LockActiveField').spinner({
+            stop: function(){ // update device when spinner has stopped spinning 
+                if (window.goodKeystrokes.indexOf(event.which) != -1){
+                    WebSocketSend("LOCKUPDATE;" + this.id + " " + this.value); 
+                     + lockid + ";" + $("#LockIO").val() + ";" + $("#LockToIO").val() + ";" + $("#Target").val() + ";" + $("#LockP").val() + ";" + $("#LockI").val() + ";" + $("#LockD").val() + ";" + $("#Interval").val() + ";" + $("#LockLimit").val();
+                }
+            }
+        });
+
+      return true;
+  
+  });
+
+
+  $("#LockStop").click(function(){
+    WebSocketSend("UNLOCK;" + window.lockID);
+    return true;
+  
+  });
+
+  $("#LockPreset").on('change', function(){
+    if($("#LockPreset").val()==1){
+        $('#LockIO').val("DAC3offset");
+        $("#LockToIO").val("ADC3val");
+        $('#Interval').val("0.3");
+        $('#Target').val("0");
+        $('#LockP').val('-0.02');
+        $('#LockI').val('0');
+        $('#LockD').val('0');
+    } else if($("#LockPreset").val()==2){
+        $('#LockIO').val("???");
+        $("#LockToIO").val("WaveMeterChannel3");
+        $('#Interval').val("1");
+        $('#Target').val("274.58964");
+        $('#LockP').val('5');
+        $('#LockI').val('0');
+        $('#LockD').val('0');
+    } else if($("#LockPreset").val()==3){
+        $('#LockIO').val("OutputCurrent844TA");
+        $("#LockToIO").val("ADC2val");
+        $('#Interval').val("0.8");
+        $('#Target').val("1.7");
+        $('#LockP').val('220');
+        $('#LockI').val('0');
+        $('#LockD').val('0');
+    } else if($("#LockPreset").val()==4){
+        $('#LockIO').val("Offset");
+        $("#LockToIO").val("WaveMeterChannel8");
+        $('#Interval').val("1");
+        $('#Target').val("367.49510");
+        $('#LockP').val('-5000');
+        $('#LockI').val('0');
+        $('#LockD').val('0');
+        $('#LockLimit').val('300');
+    } else if($("#LockPreset").val()==5){
+        $('#LockIO').val("PiezoVoltage1033");
+        $("#LockToIO").val("WaveMeterChannel5");
+        $('#Interval').val("1");
+        $('#Target').val("290.21106");
+        $('#LockP').val('-50');
+        $('#LockI').val('0');
+        $('#LockD').val('0');
+        $('#LockLimit').val('1');
+    } else if($("#LockPreset").val()==6){
+        $('#LockIO').val("PiezoVoltage461");
+        $("#LockToIO").val("WaveMeterChannel2");
+        $('#Interval').val("1");
+        $('#Target').val("650.50386");
+        $('#LockP').val('-50');
+        $('#LockI').val('0');
+        $('#LockD').val('0');
+        $('#LockLimit').val('1');
+    }            
+  });
+
+
+});
+
+    function LockInitialize(){
+        $.getJSON("./methods_dict", function(json) {
+        // populate dropdown
+        var options = $("#LockIO1");
+        var methodsarray = [];
+        $.each(json, function(index, value) {
+          for (var io in value){
+            methodsarray.push({ value: value[io], dev: io});
+          }
+        });
+        $( ".LockIOs" ).autocomplete({
+          source: methodsarray,
+          change: function(event,ui){ //disallow free text entry
+            if (ui.item==null){
+              $(this).val('');
+              $(this).focus();
+            }
+          }
+        })
+      });
+    }
+
+    function ChangeLockMode(mode){
+      // switches between Lock on (1), off (0)
+      if (mode==1){
+        $('.Lockfield').attr('disabled','disabled');
+        $('#LockSubmit').removeAttr('disabled');
+        $('#LockSubmit').prop('value','Stop Lock');
+      } else if (mode==0) {
+        $('.Lockfield').removeAttr('disabled');
+        $('#LockSubmit').prop('value','Start Lock');
+      }
+    }
+
+  </script>
+
+
+
+<div id="LockTabs" style="width:100%;height:100%;background:#f6f4ec;">
+    <ul id="LockTabsList">
+        <li><a href="#NewLock"><img src="images/plus.png"></a></li>
+        <li><a onclick="LockCloseTabs(); return false;"><img src="images/cross.png"></a></li>
+    </ul>
+    <div id="NewLock">
+
+
+Preset: <select id=LockPreset>
+<option value=1>422 rubidium lock</option>
+<option value=2>1092 wavemeter lock</option>
+<option value=3>422 TA power lock</option>
+<option value=4>408 wavemeter lock</option>
+<option value=5>1033 wavemeter lock</option>
+<option value=6>461 wavemeter lock</option>
+</select>
+  <div id="LockOptions1">
+    IO to lock: <input id="LockIO" class="LockIOs Lockfield" value=DAC3offset> <img src='images/refresh.png' style='vertical-align:middle;height:1em;cursor:pointer;' onclick='LockInitialize();'><br>
+    Reference IO: <input id="LockToIO" class="LockIOs Lockfield" value=ADC3val> <img src='images/refresh.png' style='vertical-align:middle;height:1em;cursor:pointer;' onclick='LockInitialize();'><br>
+    <table width=100% class="datatable">
+        <tr>
+          <td><label for="Interval">Interval: </label><input id="Interval" value="0.3" class=LockField></td>
+          <td><label for="Target">Target: </label><input id="Target" value="0" class=LockField></td>
+        </tr>
+        <tr>
+          <td><label for="LockIO">P: </label></td><td><input id="LockP" value="-0.02" class=LockField></td>
+        <tr>
+        </tr>
+          <td><label for="LockIO">I:  </label></td><td><input id="LockI" value="0" class=LockField></td>
+        </tr>
+        <tr>
+          <td><label for="LockIO">D: </label></td><td><input id="LockD" value="0" class=LockField></td>
+        </tr>
+        <tr>
+          <td>Limits: </td><td><input id="LockLimit" value=0.2 title="Lock will not go outside of starting value +/- limits" class=LockField></td>
+        </tr>
+    </table>
+  </div>
+
+  <input type=button value="Start Lock" id="LockSubmit"> <input type=button value="Stop Lock" id="LockStop">
+
+
+    </div>
+
+</div>
+
+
+
+
+

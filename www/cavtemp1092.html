@@ -1,0 +1,43 @@
+<script type="text/javascript">
+$(function () {    
+    $('.CavTemp1092Field').spinner({
+        numberFormat: "n",
+        stop: function(){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                WebSocketSend("SET;CavityTemp1092;" + this.id + " " + this.value); 
+                return true;
+            }
+        }
+    });
+    
+
+    
+    $('#CavTemp1092_Set').spinner({
+        min: 25,
+        max: 100,
+        step: 0.1
+    });
+    
+});
+
+
+function CavityTemp1092ReceivedData(input){ 
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+    for (var key in data2){
+        if(data2.hasOwnProperty(key) && !($('#' + key).is(":focus"))){
+            $('#' + key).val(data2[key]);       
+        }
+    }
+
+}
+</script>
+<table width=100% class="datatable">
+<tr>
+<td>Curr. Temp:</td><td><input id="CavTemp1092_Cur" value="0" style="display: inline;" type=text readonly></td></tr><tr>
+<td>
+Set Temp.:</td><td><input id="CavTemp1092_Set" class="CavTemp1092Field" value="0" style="display: inline;"></td>
+</td>
+</tr>
+</table>
+</center>           

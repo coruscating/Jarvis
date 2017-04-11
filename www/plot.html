@@ -1,0 +1,474 @@
+<script type="text/javascript">
+
+var mode=1;
+
+$(function () {
+    $('.Plotspin').spinner();
+    $('#plotPause').hide(); // don't need to show pause button at start
+
+
+    PlotInitialize();
+ 
+
+    $("#plotSubmit").click(function(){
+        // don't do anything if not connected to server
+        if (! checkWebSocket()){
+            return false;
+        }
+        if($(this).attr('value')=="Start Plot"){
+            ChangePlotMode(1);
+            var plotid=(new Date().getTime()/1000).toString();
+            window.plotID=plotid;
+
+            if ($('#PlotType').val()==3){ // heatmap
+                var options = {
+                    chart: {
+                        type: 'heatmap',
+                        backgroundColor:'transparent'
+                    },
+                                        
+                    colorAxis: {
+                        min: 0,
+                        max: 100,
+                        
+                        stops: [
+                            [0, '#3060cf'],
+                            [0.5, '#fffbbc'],
+                            [0.9, '#c4463a']
+                        ]
+                    },
+                    
+                    series: [{
+                        data: []
+                    }]
+                };
+            } else if ($('#PlotType').val()==1){ // time plot
+                var options = {
+                    chart: {
+                        type: 'line',
+                        backgroundColor:'transparent',
+                        animation: false,
+                        zoomType: 'xy'
+                    },
+
+                    navigation: {
+                        buttonOptions: {
+                            theme: {
+                               'stroke-width': 1,
+                                stroke: 'silver'
+                            }
+                        }
+                    },
+                    xAxis:{
+                        title: {
+                            text: 'Time (seconds)'
+                        }
+                    },
+                    yAxis: {
+                        title: {
+                            text: $("#PlotIO").val()
+                        }
+                    },
+                    series: [{
+                        name: $("#PlotIO").val(),
+                        data: []
+                    }]
+
+                };            
+            } else if($('#PlotType').val()==2){ // 2d plot
+                var options={
+                    chart: {
+                        type: 'line',
+                        backgroundColor:'transparent',
+                        //margin: [70, 50, 60, 80],
+                        animation: false,
+                        zoomType: 'xy'
+                    },
+
+                    navigation: {
+                        buttonOptions: {
+                            theme: {
+                               'stroke-width': 1,
+                                stroke: 'silver'
+                            }
+                        }
+                    },
+                    yAxis: {
+                        title: {
+                            text: $("#PlotIO2").val()
+                        }
+                    },
+                    series: [{
+                        name: $("#PlotIO2").val(),
+                        data: []
+                    }]
+
+                };
+            }
+            
+            
+            
+            var credits=$.extend(options, {credits:{
+                enabled: true,
+                text: "Plot ID: " + plotid
+            }});
+              
+            $('#PlotContainer').highcharts(credits);
+
+            var chart=$('#PlotContainer').highcharts();
+            
+            chart.series[0].setData([]);
+            chart.redraw();
+            
+            if ($("#PlotType").val()==1){
+            
+                if($("#PlotIOtwo").val()){
+                   chart.addAxis({
+                        id: 'plotiotwo-axis',
+                        title: {
+                            text: $("#PlotIOtwo").val()
+                        } 
+                   });
+                    chart.addSeries({
+                        name: $("#PlotIOtwo").val(),
+                        type: "line",
+                        yAxis: 'plotiotwo-axis',
+                        data: []
+                   });
+
+               }
+            
+                WebSocketSend("PLOT;TIMESERIES;"+ plotid + ";" + $("#PlotInterval1").val() + ";" + $("#PlotPoints1").val() + ";" + $("#PlotIO").val() + ";" + $("#PlotIOtwo").val());            
+                chart.setTitle({ text: 'Time Series of ' + $("#PlotIO").val()});        
+                        
+            } else if ($("#PlotType").val()==2){
+                if ($('#PlotReturn').prop('checked')){
+                    plotreturn=1;
+                } else { plotreturn=0; }
+                WebSocketSend("PLOT;2DSERIES;"+ plotid + ";" + $("#PlotInterval2").val() + ";" + $("#PlotPoints2").val() + ";" + $("#PlotIO1").val() + ";" + $("#PlotIO2").val()  + ";" + $("#SetIO").val() + ";" + $("#PlotIO2start").val() + ";" + $("#PlotIO2end").val() + ";" + plotreturn);
+                
+                
+                while(chart.series.length > 0) chart.series[0].remove(true);
+                                
+
+                chart.addSeries({
+                    name: $("#PlotIO2").val(),
+                    type: "scatter",
+                    data: []
+               });
+               if($("#PlotIO3").val()){
+                   chart.addAxis({
+                        id: 'plotio3-axis',
+                        opposite: true,
+                        title: {
+                            text: $("#PlotIO3").val()
+                        } 
+                   });
+                    chart.addSeries({
+                        name: $("#PlotIO3").val(),
+                        type: "scatter",
+                        yAxis: 'plotio3-axis',
+                        data: []
+                   });
+
+               }
+
+                
+                chart.setTitle({ text: $("#PlotIO2").val() + ' vs. ' + $("#PlotIO1").val()}); 
+                   
+            } else if ($("#PlotType").val()==3){
+                if ($('#PlotReturn2').prop('checked')){
+                    plotreturn=1;
+                } else { plotreturn=0; }
+
+                WebSocketSend("PLOT;HEATMAP;"+ plotid + ";" + $("#PlotInterval3").val() + ";" + $("#PlotPointsX").val() + ";" + $("#PlotPointsY").val() + ";" + $("#PlotIOX").val() + ";" + $("#PlotIOY").val()  + ";" + $("#PlotIOXstart").val() + ";" + $("#PlotIOXend").val() + ";" + $("#PlotIOYstart").val() + ";" + $("#PlotIOYend").val() + ";" + $("#MeasIO").val() + ";" + plotreturn);
+                
+                
+                // reset color axis min and max
+                window.chartmin = undefined;
+                window.chartmax = undefined;
+                
+                var col = ($('#PlotIOXend').val() - $('#PlotIOXstart').val())/($('#PlotPointsX').val()-1).toFixed(3);
+                var row = ($('#PlotIOYend').val() - $('#PlotIOYstart').val())/($('#PlotPointsY').val()-1).toFixed(3);
+                chart.series[0].update({
+                    colsize: col,
+                    rowsize: row
+                });
+
+                
+                chart.setTitle({ text: $("#MeasIO").val() + ' Heatmap' });
+            }
+            
+        }
+        else{
+            WebSocketSend("STOPPLOT;" + window.plotID);
+            ChangePlotMode(0);
+
+        }
+    });
+    
+    
+    $("#PlotOptions2").hide();
+    $("#PlotOptions3").hide();
+
+    $("#plotPause").click(function(){
+        if($(this).attr('value')=="Pause Plot"){
+            ChangePlotMode(2);
+        } else { 
+            ChangePlotMode(1);
+        }
+        if(!WebSocketSend("PAUSEPLOT;" + window.plotID)){
+            // websocket server not connected, turn plot off
+            ChangePlotMode(0);
+        }        
+    });
+    $("#PlotType").on('change', function(){
+        for(var i=1;i<=3;i++){
+            if(i==$("#PlotType").val()){
+                $("#PlotOptions" + i).show();
+            } else {
+                $("#PlotOptions" + i).hide();
+            }
+        }
+    });
+
+    $("#PlotPreset").on('change', function(){
+        if($("#PlotPreset").val()==1){
+            $("#PlotIO1").val("CH2-2");
+            $("#PlotIO2").val("PowerMeterPower");
+            $("#PlotIO3").val("");
+            $("#SetIO").val("PARAM 2 2");
+            $("#PlotIO2start").val(20000);
+            $("#PlotIO2end").val(65000);  
+            $("#PlotInterval2").val(0.5);
+            $("#PlotPoints2").val(46);
+            $("#PlotReturn").prop('checked', true);
+        } else if ($("#PlotPreset").val()==2){
+            $("#PlotIO1").val("CH0-2");
+            $("#PlotIO2").val("PowerMeterPower");
+            $("#PlotIO3").val("");
+            $("#SetIO").val("PARAM 0 2");
+            $("#PlotIO2start").val(20000);
+            $("#PlotIO2end").val(65000);  
+            $("#PlotInterval2").val(0.5);
+            $("#PlotPoints2").val(46);
+            $("#PlotReturn").prop('checked', true);
+        } else if ($("#PlotPreset").val()==3){
+            $("#PlotIO1").val("HorizComp");
+            $("#PlotIO2").val("MMAmp");
+            $("#PlotIO3").val("Count");
+            $("#PlotIO2start").val($("#HorizComp").val());
+            $("#PlotIO2end").val(parseFloat($("#HorizComp").val())+0.1);
+            $("#SetIO").val("HorizComp");
+            $("#PlotInterval2").val(0.3);
+            $("#PlotPoints2").val(40);
+            $("#PlotReturn").prop('checked', false);
+        } else if ($("#PlotPreset").val()==4){
+            $("#PlotIO1").val("CH2-0");
+            $("#PlotIO2").val("Count");
+            $("#SetIO").val("PARAM 2 0");    
+            $("#PlotIO2start").val(195);
+            $("#PlotIO2end").val(205);
+            $("#PlotInterval2").val(0.3);
+            $("#PlotPoints2").val(41);
+            $("#PlotReturn").prop('checked', true);
+        } else if ($("#PlotPreset").val()==5){
+            $("#PlotIO1").val("CH3-4");
+            $("#PlotIO2").val("Count");
+            $("#SetIO").val("PARAM 3 4");
+            $("#PlotReturn").prop('checked', false);     
+        } else if ($("#PlotPreset").val()==6){
+            $("#PlotIO1").val("DAC3offset");
+            $("#PlotIO2").val("ADC3val");
+            $("#SetIO").val("DAC3offset");    
+            $("#PlotIO2start").val($("#DAC3offset").val()-0.1);
+            $("#PlotIO2end").val(parseFloat($("#DAC3offset").val())+0.1);
+            $("#PlotInterval2").val(0.1);
+            $("#PlotPoints2").val(40);
+            $("#PlotReturn").prop('checked', false);
+        }
+    });
+    
+ 
+});
+
+
+function PlotInitialize(){
+// populate autocomplete
+var methodsarray = [];
+$.ajax({
+    cache: false,
+    url: "methods_dict",
+    dataType: "json", 
+    success: function(json) {        
+        var methodsarray = [];
+        $.each(json, function(index, value) {
+            for (var io in value){
+                methodsarray.push({ value: value[io], dev: io});
+            }
+        });
+        $( ".PlotIOs" ).autocomplete({
+          source: methodsarray,
+          change: function(event,ui){ //disallow free text entry
+            if (ui.item==null){
+                $(this).val('');
+                $(this).focus();
+            }
+            if($(this).attr('id')=="PlotIO1"){
+                $("SetIO").val($(this).val());
+            }
+          }
+        })
+    }
+});
+    
+
+}
+
+function ChangePlotMode(mode){
+    // switches between plot on (1), off (0), and paused (2)
+    if (mode==1){
+        $('.Plotfield').attr('disabled','disabled');
+        $('#plotSubmit').removeAttr('disabled');
+        $('#plotSubmit').prop('value','Stop Plot');
+        $('#plotPause').prop('value', 'Pause Plot');
+        $('#plotPause').show();
+    } else if (mode==0) {
+        $('.Plotfield').removeAttr('disabled');
+        $('#plotSubmit').prop('value','Start Plot');
+        $('#plotPause').hide();
+    } else if (mode==2) {
+        $('#plotPause').prop('value', 'Resume Plot');
+        $('#plotSubmit').attr('disabled','disabled');
+    }
+    
+}
+
+function PlotReceivedData(input){
+    // sample input PLOT1409846068.043;1409846068.04;PowerMeter;{"PowerMeterWavelength": 635.0, "PowerMeterPower": 7.47491003e-06, "PowerMeterMinPower": 5.5e-08, "PowerMeterMaxPower": 0.0055}
+    
+    var string = input.split(";");
+    var id = string[0].split("-"); // for 2d and heat plots
+    log(PLOT, input);
+
+    if ("PLOT" + window.plotID == id[0] || "PLOT2D" + window.plotID == id[0] || "PLOTHEAT" + window.plotID == id[0]){ // plot is started by this Jarvis instance 
+
+    // if we're actually waiting for a plot
+    if($('#plotSubmit').attr('value')!="Start Plot"){
+        var string = input.split(";");
+        if (string[1]=='DONE'){
+            ChangePlotMode(0);
+        }
+
+        else {       
+            var chart=$('#PlotContainer').highcharts();
+            if ($("#PlotType").val()==1){
+                var data2=JSON.parse(string[2]);
+                var starttime = parseFloat(string[0].replace('PLOT', ''));
+                chart.series[0].addPoint([parseFloat(string[1])-starttime, parseFloat(data2[$("#PlotIO").val()])]);
+                if($("#PlotIOtwo").val()){ 
+                    log(PLOT, parseFloat(data2[$("#PlotIOtwo").val()]));
+                    chart.series[1].addPoint([parseFloat(string[1])-starttime, parseFloat(data2[$("#PlotIOtwo").val()])]);
+                }
+            }
+            else if($("#PlotType").val()==2){  
+                var data2=JSON.parse(string[2]);       
+                chart.series[0].addPoint([parseFloat(data2[$("#PlotIO1").val()]), parseFloat(data2[$("#PlotIO2").val()]),parseFloat(data2[$("#PlotIO3").val()])]);
+                if($("#PlotIO3").val()){
+                    chart.series[1].addPoint([parseFloat(data2[$("#PlotIO1").val()]), parseFloat(data2[$("#PlotIO3").val()])]);   
+                }
+            }
+            else if($("#PlotType").val()==3){  
+                var data2=JSON.parse(string[2]);         
+                
+                heatval = parseFloat(data2[$("#MeasIO").val()]);
+                chart.series[0].addPoint([parseFloat(data2[$("#PlotIOX").val()]), parseFloat(data2[$("#PlotIOY").val()]),heatval]);
+                
+                if (typeof window.chartmin==='undefined'){
+                    window.chartmin = heatval;
+                    window.chartmax = heatval;
+                }
+                
+                if (window.chartmin > heatval){
+                    window.chartmin = heatval;
+                }
+                
+                if (window.chartmax < heatval){
+                    window.chartmax = heatval;
+                }
+                
+                chart.colorAxis[0].update({
+                    min: window.chartmin,
+                    max: window.chartmax
+                });
+                chart.redraw();    
+            }        
+        }
+    }
+    }
+} 
+
+function rangeswap(swapid){ // swaps the start and end of a plot range for backwards scan convenience 
+    var start=$('#' + swapid + 'start').val();
+    var end=$('#' + swapid + 'end').val();
+    $('#' + swapid + 'start').val(end);
+    $('#' + swapid + 'end').val(start);
+}
+</script>
+
+
+    <label for="type">Type of plot</label>
+    <select name="type" id="PlotType" class="Plotfield">
+      <option value=1 selected=selected>Time series</option>
+      <option value=2>2-D</option>
+      <option value=3>Heatmap</option>
+      </select>
+      
+    <div id="PlotOptions1">IO1: <input id="PlotIO" class="PlotIOs Plotfield"><img src='images/refresh.png' style='vertical-align:middle;height:1em;cursor:pointer;' onclick='PlotInitialize();'><br>
+    IO2: <input id="PlotIOtwo" class="PlotIOs Plotfield"><img src='images/refresh.png' style='vertical-align:middle;height:1em;cursor:pointer;' onclick='PlotInitialize();'><br>
+    Number of points: <input id="PlotPoints1" class="Plotfield Plotspin" value=10><br>
+    Points interval (seconds): <input id="PlotInterval1" class="Plotfield Plotspin" value=1>
+    </div>
+    
+    
+  
+    
+    <div id="PlotOptions2">
+        <label for="plotpreset">Preset</label>
+    <select name="plotpreset" id="PlotPreset" class="Plotfield">
+      <option value=1 selected=selected>1092 pulse programmer scan</option>
+      <option value=2>422 pulse programmer scan</option>
+      <option value=3>micromotion side scan</option>
+      <option value=4>1092 scan</option>
+      <option value=5>tickle scan</option>
+      <option value=6>422 rubidium lock scan</option>
+      </select>  
+      <br>
+    X-axis IO:</label><input id="PlotIO1" class="PlotIOs Plotfield" value="WaveMeterChannel6"><img src='images/refresh.png' style='vertical-align:middle;height:1em;cursor:pointer;' onclick='PlotInitialize();'><br>
+    Y-axis IO: <input id="PlotIO2" class="PlotIOs Plotfield" value="Count"><img src='images/refresh.png' style='vertical-align:middle;height:1em;cursor:pointer;' onclick='PlotInitialize();'><br>
+    Y-axis IO2: <input id="PlotIO3" class="PlotIOs Plotfield" value="MMAmp"><img src='images/refresh.png' style='vertical-align:middle;height:1em;cursor:pointer;' onclick='PlotInitialize();'><br>
+    Set IO: <input id="SetIO" class="PlotIOs Plotfield" value="DAC3offset"><img src='images/refresh.png' style='vertical-align:middle;height:1em;cursor:pointer;' onclick='PlotInitialize();'><br>
+    Set IO range: <input id="PlotIO2start" class="Plotfield Plotspin" value=0> to
+    <input id="PlotIO2end" class="Plotfield Plotspin" value=0> <input type=button id="PlotIOSwap" value="Swap" onclick='javascript:rangeswap("PlotIO2");'>
+    <input type=checkbox id="PlotReturn"> Return to start<br>
+    Number of points: <input id="PlotPoints2" class="Plotfield Plotspin" value=10><br>
+    Points interval (seconds): <input id="PlotInterval2" class="Plotfield Plotspin" value=1>
+    </div>
+    
+    <div id="PlotOptions3">X-axis IO:</label><input id="PlotIOX" class="PlotIOs Plotfield" value="PARAM 1 0"><img src='images/refresh.png' style='vertical-align:middle;height:1em;cursor:pointer;' onclick='PlotInitialize();'><br>
+    X IO range: <input id="PlotIOXstart" class="Plotfield Plotspin" value=0> to
+    <input id="PlotIOXend" class="Plotfield Plotspin" value=0> <input type=button id="PlotIOXSwap" value="Swap" onclick='javascript:rangeswap("PlotIOX");'><br><br>  
+    Y-axis IO: <input id="PlotIOY" class="PlotIOs Plotfield" value="PARAM 1 2"><img src='images/refresh.png' style='vertical-align:middle;height:1em;cursor:pointer;' onclick='PlotInitialize();'><br>
+    Y IO range: <input id="PlotIOYstart" class="Plotfield Plotspin" value=0> to
+    <input id="PlotIOYend" class="Plotfield Plotspin" value=0> <input type=button id="PlotIOYSwap" value="Swap" onclick='javascript:rangeswap("PlotIOY");'><br>
+    <input type=checkbox id="PlotReturn2"> Return to start<br>  
+    Measure IO: <input id="MeasIO" class="PlotIOs Plotfield" value="Count"><img src='images/refresh.png' style='vertical-align:middle;height:1em;cursor:pointer;' onclick='PlotInitialize();'><br>
+    Number of points X: <input id="PlotPointsX" class="Plotfield Plotspin" value=10><br>
+    Number of points Y: <input id="PlotPointsY" class="Plotfield Plotspin" value=10><br>
+    Points interval (seconds): <input id="PlotInterval3" class="Plotfield Plotspin" value=1>
+    </div>
+    
+    <input type=button value="Start Plot" id="plotSubmit"> <input type=button value="Pause Plot" id="plotPause">
+ 
+     <div id="PlotContainer" style="width:100%;"></div>
+   

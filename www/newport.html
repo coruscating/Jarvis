@@ -1,0 +1,86 @@
+<script type="text/javascript">
+$(function () {    
+    $('.NewportField').spinner({
+        numberFormat: "n",
+        step: 0.01,
+        stop: function(){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                WebSocketSend("SET;Newport;" + this.id + " " + this.value); 
+                return true;
+            }
+        }
+    });
+    
+    $('#DiodeCurrent').spinner({
+        min: 0,
+        max: 165
+    });
+    
+    $('#PiezoVoltage').spinner({
+        min: 0,
+        max: 100
+    });
+
+    // sliders
+    $('.onoffswitch-checkbox').change(function(){
+        if(this.checked){
+            // Add green shadow to ON state
+            $('label[for=' + this.id + ']').css("-webkit-box-shadow", "0 0 15px #00FF00");
+        } else {
+            $('label[for=' + this.id + ']').css("-webkit-box-shadow", "none");
+        }
+    });    
+        
+    $('#NewportDialog').find('.onoffswitch-checkbox').click(function(){
+        if(this.checked){
+            WebSocketSend("SET;Newport;" + this.id + " ON"); 
+        } else {
+            WebSocketSend("SET;Newport;" + this.id + " OFF"); 
+        }
+    });
+    
+});
+
+
+
+function NewportReceivedData(input){ 
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+    for (var key in data2){
+        if(data2.hasOwnProperty(key) && !($('#' + key).is(":focus"))){
+            $('#' + key).val(data2[key]);       
+        }
+    }
+    $('#OutputState461').prop('checked', Boolean(parseInt(data2["OutputState461"])));
+    $('#OutputState461').trigger('change'); // Need to trigger event so shadow is added
+    $('#OutputState1033').prop('checked', Boolean(parseInt(data2["OutputState1033"])));
+    $('#OutputState1033').trigger('change'); // Need to trigger event so shadow is added
+
+}
+</script>
+<table width=100% class="datatable">
+    <tr><td></td><td><strong>1033</strong></td><td><strong>461</strong></td></tr>
+<tr>
+<td>Piezo:</td><td><input id="PiezoVoltage1033" class="NewportField" value="0" style="display: inline;"></td>
+<td><input id="PiezoVoltage461" class="NewportField" value="0" style="display: inline;"></td></tr><tr>
+<td>Current:</td><td><input id="DiodeCurrent1033" class="NewportField" value="0" style="display: inline;"></td>
+<td><input id="DiodeCurrent461" class="NewportField" value="0" style="display: inline;"></td>
+</tr>
+<td>Temp:</td><td><input id="DiodeTemperature1033" class="NewportField" value="0" style="display: inline;"></td></tr>
+<tr><td></td><td><div class="onoffswitch">
+    <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox" id="OutputState1033">
+    <label class="onoffswitch-label" for="OutputState1033">
+        <span class="onoffswitch-inner"></span>
+        <span class="onoffswitch-switch"></span>
+    </label>
+</div> </td><td><div class="onoffswitch">
+    <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox" id="OutputState461">
+    <label class="onoffswitch-label" for="OutputState461">
+        <span class="onoffswitch-inner"></span>
+        <span class="onoffswitch-switch"></span>
+    </label>
+</div></td></tr>
+</table>
+844 TA current: <input id="OutputCurrent844TA" class="NewportField" value="0"><br>
+844 TA set power: <input id="SetOutputPower844TA" class="NewportField" value="0"><br>
+844 TA power:<input id="OutputPower844TA" type=text value="0" readonly>

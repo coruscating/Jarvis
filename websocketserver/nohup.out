@@ -1,0 +1,119 @@
+Server accepting connections on quanta-wigner ip:18.62.18.232 port: 9999
+Connected to AgilentBOUSB
+Connected to AgilentEQUSB
+Connected to BakeSwitch
+Connected to Camera
+Can't connect to CavityTemp1092, error [Errno 111] Connection refused
+Traceback (most recent call last):
+  File "websocketserver.py", line 173, in addConnDev
+    deviceconn.connect((deviceIP, int(devicePort)))
+  File "/usr/lib/python2.7/socket.py", line 224, in meth
+    return getattr(self._sock,name)(*args)
+error: [Errno 111] Connection refused
+
+Connected to CavityTemp674
+Connected to FunctionGenerator
+Connected to IonPump
+Connected to LaserController
+Connected to Newport
+Can't connect to Oscilloscope, error [Errno 111] Connection refused
+Traceback (most recent call last):
+  File "websocketserver.py", line 173, in addConnDev
+    deviceconn.connect((deviceIP, int(devicePort)))
+  File "/usr/lib/python2.7/socket.py", line 224, in meth
+    return getattr(self._sock,name)(*args)
+error: [Errno 111] Connection refused
+
+Connected to PhotonCounter
+Connected to PowerMeter
+Connected to PulseProgrammer
+Connected to QuAD
+Connected to Sentorr
+Connected to Shutters
+Can't connect to SourceMeter, error [Errno 111] Connection refused
+Traceback (most recent call last):
+  File "websocketserver.py", line 173, in addConnDev
+    deviceconn.connect((deviceIP, int(devicePort)))
+  File "/usr/lib/python2.7/socket.py", line 224, in meth
+    return getattr(self._sock,name)(*args)
+error: [Errno 111] Connection refused
+
+Connected to TempAndHumi
+Can't connect to TrapElectrodes, error [Errno 111] Connection refused
+Traceback (most recent call last):
+  File "websocketserver.py", line 173, in addConnDev
+    deviceconn.connect((deviceIP, int(devicePort)))
+  File "/usr/lib/python2.7/socket.py", line 224, in meth
+    return getattr(self._sock,name)(*args)
+error: [Errno 111] Connection refused
+
+Connected to TrapElectrodesAgilent
+Connected to WaveMeter
+Launching console for Server...
+
+Enter HELP for a list of commands
+Server> Traceback (most recent call last):
+  File "websocketserver.py", line 459, in <module>
+    server.run()
+  File "websocketserver.py", line 306, in run
+    text = sys.stdin.readline().rstrip()
+IOError: [Errno 9] Bad file descriptor
+  File "websocketserver.py", line 361
+    print "Exception: " str(e)
+                          ^
+SyntaxError: invalid syntax
+Server accepting connections on quanta-wigner ip:18.62.18.232 port: 9999
+Connected to AgilentBOUSB
+Connected to AgilentEQUSB
+Connected to BakeSwitch
+Connected to Camera
+Can't connect to CavityTemp1092, error [Errno 111] Connection refused
+Traceback (most recent call last):
+  File "websocketserver.py", line 173, in addConnDev
+    deviceconn.connect((deviceIP, int(devicePort)))
+  File "/usr/lib/python2.7/socket.py", line 224, in meth
+    return getattr(self._sock,name)(*args)
+error: [Errno 111] Connection refused
+
+Connected to CavityTemp674
+Connected to FunctionGenerator
+Connected to IonPump
+Connected to LaserController
+Connected to Newport
+Can't connect to Oscilloscope, error [Errno 111] Connection refused
+Traceback (most recent call last):
+  File "websocketserver.py", line 173, in addConnDev
+    deviceconn.connect((deviceIP, int(devicePort)))
+  File "/usr/lib/python2.7/socket.py", line 224, in meth
+    return getattr(self._sock,name)(*args)
+error: [Errno 111] Connection refused
+
+Connected to PhotonCounter
+Connected to PowerMeter
+Connected to PulseProgrammer
+Connected to QuAD
+Connected to Sentorr
+Connected to Shutters
+Can't connect to SourceMeter, error [Errno 111] Connection refused
+Traceback (most recent call last):
+  File "websocketserver.py", line 173, in addConnDev
+    deviceconn.connect((deviceIP, int(devicePort)))
+  File "/usr/lib/python2.7/socket.py", line 224, in meth
+    return getattr(self._sock,name)(*args)
+error: [Errno 111] Connection refused
+
+Connected to TempAndHumi
+Can't connect to TrapElectrodes, error [Errno 111] Connection refused
+Traceback (most recent call last):
+  File "websocketserver.py", line 173, in addConnDev
+    deviceconn.connect((deviceIP, int(devicePort)))
+  File "/usr/lib/python2.7/socket.py", line 224, in meth
+    return getattr(self._sock,name)(*args)
+error: [Errno 111] Connection refused
+
+Connected to TrapElectrodesAgilent
+Connected to WaveMeter
+Launching console for Server...
+
+Enter HELP for a list of commands
+Server> 

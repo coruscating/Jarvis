@@ -1,0 +1,358 @@
+<script type="text/javascript">
+$(function () {
+
+    $('.TrapElectrodesSet').spinner({
+        numberFormat: "n",
+        min: -50,
+        max: 50,
+        step: 0.01,
+        stop: function(event){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                WebSocketSend("SET;TrapElectrodesAgilent;" + this.id + " " + this.value); 
+                return true;
+            }
+        }
+    });
+
+ 
+    $('.oneplace').spinner().change(function(){
+        $(this).val($(this).val().toFixed(2));
+    });
+ 
+    $('#FindSecularFreqs').click(function(){
+        WebSocketSend('SET;TrapElectrodesAgilent;FindSecularFreqs');
+    });
+
+    $('#FindDCVoltages').click(function(){
+        WebSocketSend('SET;TrapElectrodesAgilent;FindDCVoltages');
+    });
+
+    $('#GotoVoltages').click(function(){
+        WebSocketSend('SET;TrapElectrodesAgilent;GotoVoltages');
+    });
+
+    $('#GetValues').click(function(){
+        WebSocketSend('SET;TrapElectrodesAgilent;GetValues');
+    });
+    
+    $('#ElectrodeConst').change(function(){
+        WebSocketSend('SET;TrapElectrodesAgilent;ElectrodeConst ' + $('#ElectrodeConst').val());
+    });
+
+    $('#SetToActual').click(function(){
+        for(var i=0;i<6;i++){
+            WebSocketSend('SET;TrapElectrodesAgilent;E' + i + ' ' + $('#RealE' + i).val());
+            WebSocketSend('SET;TrapElectrodesAgilent;HorizComp 0');
+            WebSocketSend('SET;TrapElectrodesAgilent;VertComp 0');
+        }
+    });
+
+   /* var img = new Image;
+    img.src="images/zx_view.png";
+    var c = document.getElementById("XZCanvas");
+    var ctx = c.getContext("2d");
+    ctx.drawImage(img, 10, 10);
+
+    img.src="images/yz_view.png";
+    c = document.getElementById("YZCanvas");
+    ctx = c.getContext("2d");
+    ctx.drawImage(img, 10, 10);
+
+    img.src="images/xy_view.png";
+    c = document.getElementById("XYCanvas");
+    ctx = c.getContext("2d");
+    ctx.drawImage(img, 10, 10);*/
+
+
+});
+
+
+function DrawTrapXZ(angle){
+    var c = document.getElementById("XZCanvas");
+    var ctx = c.getContext("2d");
+    ctx.clearRect(0, 0, c.width, c.height);
+
+    var x_1 = 100*Math.cos(angle);
+    var x_2 = 100*Math.sin(angle);
+    var z_1 = 100*Math.cos(angle + Math.PI/2.0);
+    var z_2 = 100*Math.sin(angle + Math.PI/2.0);
+
+    var centerx=103;
+    var centery=73;
+    ctx.beginPath();
+    ctx.setLineDash([0, 0]);
+    ctx.fillStyle = 'black';
+    ctx.font = "bold 15px Arial";
+    ctx.fillText('x', centerx+55, centery);
+    ctx.moveTo(centerx - 50, centery);
+    ctx.lineTo(centerx+ 50, centery);
+    ctx.fillText('z', centerx+5, 25);
+    ctx.moveTo(centerx, centery +50);
+    ctx.lineTo(centerx, centery-50);
+    // line color
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    //angle
+
+    ctx.beginPath();
+    var radius = 25;
+    var startangle = 2*Math.PI - angle;
+    if (angle<0){
+        var counterClockwise = false;
+        startangle=-angle;
+    } else {
+        var counterClockwise= true;
+    }
+    if (angle != 0){
+        ctx.arc(113,83,radius,0,startangle,counterClockwise);
+        ctx.strokeStyle = 'red';
+        ctx.stroke();
+    }
+
+    ctx.fillStyle = 'red';
+    ctx.font = "bold 16px Arial";
+    var angledeg = (angle / (Math.PI/(180))).toFixed(2);
+    var deg = '\xB0';
+    ctx.fillText(String(angledeg).concat(String(deg)), centerx+40, 24);
+
+    //tilted axis
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(centerx - z_1/2.0, centery+ z_2/2.0);
+    ctx.lineTo(centerx+z_1/2.0, centery-z_2/2.0)
+    ctx.moveTo(centerx-x_1/2.0, centery +x_2/2.0);
+    ctx.lineTo(centerx+x_1/2.0, centery-x_2/2.0)
+    // line color
+    ctx.strokeStyle = "blue";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+}
+
+function DrawTrapYZ(angle){
+    var c = document.getElementById("YZCanvas");
+    var ctx = c.getContext("2d");
+    ctx.clearRect(0, 0, c.width, c.height);
+
+    var z_1 = 100*Math.cos(angle);
+    var z_2 = 100*Math.sin(angle);
+    var y_1 = 100*Math.cos(angle + Math.PI/2.0);
+    var y_2 = 100*Math.sin(angle + Math.PI/2.0);
+ 
+    centerx=103;
+    centery=64;
+    ctx.beginPath();
+    ctx.setLineDash([0, 0]);
+    ctx.fillStyle = 'black';
+    ctx.font = "bold 15px Arial";
+    ctx.fillText('z', centerx+55, centery);
+    ctx.moveTo(centerx - 50, centery);
+    ctx.lineTo(centerx+ 50, centery)
+    ctx.fillText('y', centerx+5, 19);
+    ctx.moveTo(centerx, centery +50);
+    ctx.lineTo(centerx, centery-50)
+    // line color
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    //angle
+
+    ctx.beginPath();
+    var radius = 25;
+    var startangle = 2*Math.PI - angle;
+    if (angle<0){
+        var counterClockwise = false;
+        startangle=-angle;
+    } else {
+        var counterClockwise= true;
+    }
+    if (angle != 0){
+        ctx.arc(centerx,73,radius,0,startangle,counterClockwise);
+        ctx.strokeStyle = 'red';
+        ctx.stroke();
+    }
+
+    ctx.fillStyle = 'red';
+    ctx.font = "bold 16px Arial";
+    var angledeg = (angle / (Math.PI/(180))).toFixed(2);
+    var deg = '\xB0';
+    ctx.fillText(String(angledeg).concat(String(deg)), centerx+40, 24);
+
+    //tilted axis
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(centerx - y_1/2.0, centery+ y_2/2.0);
+    ctx.lineTo(centerx+y_1/2.0, centery-y_2/2.0)
+    ctx.moveTo(centerx-z_1/2.0, centery +z_2/2.0);
+    ctx.lineTo(centerx+z_1/2.0, centery-z_2/2.0)
+    // line color
+    ctx.strokeStyle = "blue";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+}
+
+function DrawTrapXY(angle){
+    var c = document.getElementById("XYCanvas");
+    var ctx = c.getContext("2d");
+    ctx.clearRect(0, 0, c.width, c.height);
+
+    var x_1 = 100*Math.cos(angle);
+    var x_2 = 100*Math.sin(angle);
+    var y_1 = 100*Math.cos(angle + Math.PI/2.0);
+    var y_2 = 100*Math.sin(angle + Math.PI/2.0);
+
+    centerx=104;
+    centery=64;
+    ctx.beginPath();
+    ctx.setLineDash([0, 0]);
+    ctx.fillStyle = 'black';
+    ctx.font = "bold 15px Arial";
+    ctx.fillText('x', centerx+55, centery);
+    ctx.moveTo(centerx - 50, centery);
+    ctx.lineTo(centerx+ 50, centery);
+    ctx.fillText('y', centerx+5, 20);
+    ctx.moveTo(centerx, centery +50);
+    ctx.lineTo(centerx, centery-50);
+    // line color
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    //angle
+
+    ctx.beginPath();
+    var radius = 25;
+    var startangle = 2*Math.PI - angle;
+    if (angle<0){
+        var counterClockwise = false;
+        startangle=-angle;
+    } else {
+        var counterClockwise= true;
+    }
+    if (angle != 0){
+        ctx.arc(centerx,centery,radius,0,startangle,counterClockwise);
+        ctx.strokeStyle = 'red';
+        ctx.stroke();
+    }
+
+    ctx.fillStyle = 'red';
+    ctx.font = "bold 16px Arial";
+    var angledeg = (angle / (Math.PI/(180))).toFixed(2);
+    var deg = '\xB0';
+    ctx.fillText(String(angledeg).concat(String(deg)), centerx+40, 24);
+
+    //tilted axis
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(centerx - y_1/2.0, centery+ y_2/2.0);
+    ctx.lineTo(centerx+y_1/2.0, centery-y_2/2.0);
+    ctx.moveTo(centerx-x_1/2.0, centery +x_2/2.0);
+    ctx.lineTo(centerx+x_1/2.0, centery-x_2/2.0);
+    // line color
+    ctx.strokeStyle = "blue";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+ //   };
+}
+
+function TrapElectrodesAgilentReceivedData(input){ 
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+    for (var key in data2){
+        if(data2.hasOwnProperty(key) && !($('#' + key).is(":focus"))){
+            $('#' + key).val(data2[key]);    
+        }
+        if(key.lastIndexOf('TrapA', 0)==0){
+            $('#' + key + '0').val(data2[key][0]);
+            $('#' + key + '1').val(data2[key][1]);
+            $('#' + key + '2').val(data2[key][2]);
+        }
+    }
+
+    for(var i=0;i<3;i++){
+        $('#RealE' + i).val((parseFloat($('#E' + i).val())+parseFloat($('#VertComp').val())+parseFloat($('#HorizComp').val())).toFixed(3));
+    }
+    for(var i=3;i<6;i++){
+        $('#RealE' + i).val((parseFloat($('#E' + i).val())+parseFloat($('#VertComp').val())-parseFloat($('#HorizComp').val())).toFixed(3));
+    }
+    $('#RealGND').val($('#GND').val());
+    DrawTrapXY(Math.asin($('#TrapAX1').val()));
+    DrawTrapYZ(Math.asin($('#TrapAY2').val()));
+    DrawTrapXZ(Math.asin($('#TrapAZ0').val()));
+}
+</script>
+
+
+<table id=electrodestable>
+    <th colspan=5><center>Set Voltages (in volts)</center></th><th colspan=5><center>Compensated Voltages (in volts)</center></th>
+    <tr><td class=left><input id=E0 class=TrapElectrodesSet value=0></td><th rowspan=3>&nbsp;&nbsp;</th><th rowspan=3 class=mid><input id=GND class=TrapElectrodesSet value=0></th><th rowspan=3>&nbsp;&nbsp;</th><td class=right><input id=E3 class=TrapElectrodesSet value=0></td> <td class=left><input id=RealE0 type=text readonly value=0></td><th rowspan=3>&nbsp;&nbsp;</th><th rowspan=3 class=mid><input id=RealGND type=text readonly value=0></th><th rowspan=3>&nbsp;&nbsp;</th><td class=right><input id=RealE3 type=text readonly value=0></td></tr>
+
+    <tr><td class=left><input id=E1 class=TrapElectrodesSet value=0></td><td class=right><input id=E4 class=TrapElectrodesSet value=0></td> <td class=left><input id=RealE1 type=text readonly value=0></td><td class=right><input id=RealE4 type=text readonly value=0></td></tr>
+
+    <tr><td class=left><input id=E2 class=TrapElectrodesSet value=0></td><td class=right><input id=E5 class=TrapElectrodesSet value=0></td> <td class=left><input id=RealE2 type=text readonly value=0></td><td class=right><input id=RealE5 type=text readonly value=0></td></tr>
+</table>
+
+
+
+
+<table>
+    <tr>
+        <td>Horiz. Comp.</td><td><input id=HorizComp class=TrapElectrodesSet value=0 title="added to left electrodes and subtracted from right electrodes"></td>
+        <td>Vert. Comp.</td><td><input id=VertComp class=TrapElectrodesSet value=0 title="added to all non-center electrodes"></td>
+        <td><button id=GetValues>Get Voltages</button></td>
+    </tr>
+</table>
+<table>
+    <tr>
+        <td>Sec. Freqs.</td>
+        <th colspan=3>Axes</th><td>&nbsp;&nbsp;</td>
+        <td>RF Freq</td>
+    </tr>
+    <tr>
+        <td><input id="SecularZ" class=TrapElectrodesSet value=0 title="Axial, in 2 &pi; MHz"></td>
+        <td><input id="TrapAZ0" type=text readonly value=0></td>
+        <td><input id="TrapAZ1" type=text readonly value=0></td>
+        <td><input id="TrapAZ2" type=text readonly value=0></td>
+        <td> </td><td><input id=FreqRF class=TrapElectrodesSet value=0 title='in MHz'></td>
+    </tr>
+
+    <tr>
+        <td><input id="SecularX" type=text readonly value=0 title="Along trap, in 2 &pi; MHz"></td>
+        <td><input id="TrapAX0" type=text readonly value=0></td>
+        <td><input id="TrapAX1" type=text readonly value=0></td>
+        <td><input id="TrapAX2" type=text readonly value=0></td>
+        <td> </td><td>RF Amp.</td>
+    </tr>
+
+    <tr>
+        <td><input id="SecularY" type=text readonly value=0 title="Out of trap plane, in 2 &pi; MHz"></td>
+        <td><input id="TrapAY0" type=text readonly value=0></td>
+        <td><input id="TrapAY1" type=text readonly value=0></td>
+        <td><input id="TrapAY2" type=text readonly value=0></td>
+        <td> </td><td><input id=VoltRF class=TrapElectrodesSet value=0 title='half of Vpp'></td>
+    </tr>
+
+
+
+</table>
+Tilt (Degrees): <input id=XYTilt class=TrapElectrodesSet value=0 title='XY tilt in radians'><br>
+
+<canvas id="XYCanvas" width="211" height="137" style="background: url('images/xy_view.png');"></canvas><canvas id="XZCanvas" width="211" height="137" style="background: url('images/zx_view.png');"></canvas><canvas id="YZCanvas" width="211" height="137" style="background: url('images/yz_view.png');"></canvas>
+<br>
+
+<select id=ElectrodeConst>
+    <option value='double'>No constraints, double electrode size</option>
+    <option value='noconst'>No constraints, ground=0</option>
+    <option value='noconstground'>No constraints, ground free</option>
+    <option value='sym'>Symmetric, ground=0</option>
+    <option value='symground'>Symmetric, ground free</option>
+    <option value='side'>Sides tied together, ground=0</option>
+    <option value='sideground'>Sides tied together, ground free</option>
+</select>
+<button id=FindSecularFreqs class=TrapFunction>Find Secular Freq</button>
+<button id=FindDCVoltages class=TrapFunction>Find DC Voltages</button>
+<button id=GotoVoltages class=TrapFunction>Go to Voltages</button>

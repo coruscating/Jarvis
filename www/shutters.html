@@ -1,0 +1,145 @@
+<script type="text/javascript">
+$(function () {
+    $('.shutterbox').click(function(){
+    // sends command upon click in GUI, update comes from class change
+        if ($(this).hasClass("OPEN")){ 
+            state="CLOSE";
+        } else {
+            state="OPEN";
+        }
+
+        if ($(this).is('#ShuttersPI')){
+            ShuttersChange("405", state);
+            ShuttersChange("461", state);       
+        } else if ($(this).is('#ShuttersALL')){
+            ShuttersChange("405", state);
+            ShuttersChange("461", state);
+            ShuttersChange("422", state);
+            ShuttersChange("674", state);
+            ShuttersChange("1092", state);
+            $('#ShuttersALL').addClass(state).trigger("addClass" + state); 
+        } else {
+            ShuttersChange($(this).attr('id').split("r")[1], state);
+        }
+
+    });
+
+    // updating GUI upon class change
+    $('.shutterbox').on('addClassOPEN', function () {
+      $(this).removeClass('CLOSE');
+    });      
+
+    $('.shutterbox').on('addClassCLOSE', function () {
+      $(this).removeClass('OPEN');
+    });    
+    $( "#ShuttersOverlay" ).hide();
+});
+
+function ShuttersChange(shutter,state){ // open/close a shutter
+    // need newlines to break up commands sent closely together
+    if (shutter=="422"){
+        if(state=="OPEN" && typeof window.amp422 !== 'undefined'){
+            WebSocketSend("SET;PulseProgrammer;PARAM 0 2 " + window.amp422 + '\n');
+            WebSocketSend("SET;PulseProgrammer;PARAM 0 0 " + window.freq422 + '\n');
+            $('#Shutter422').addClass("OPEN").trigger("addClassOPEN");   
+        } else if(state=="CLOSE") {
+            window.amp422 = $('#CH0-2').val(); //save value for opening later
+            WebSocketSend("SET;PulseProgrammer;PARAM 0 2 0" + '\n');
+            WebSocketSend("SET;PulseProgrammer;PARAM 0 0 0" + '\n');
+            $('#Shutter422').addClass("CLOSE").trigger("addClassCLOSE"); 
+        }
+    
+    } else if (shutter=="674"){
+        if(state=="OPEN" && typeof window.amp674 !== 'undefined'){
+            WebSocketSend("SET;PulseProgrammer;PARAM 1 2 " + window.amp674 + '\n');
+            WebSocketSend("SET;PulseProgrammer;PARAM 1 0 " + window.freq674 + '\n');
+            $('#Shutter674').addClass("OPEN").trigger("addClassOPEN");   
+        } else if(state=="CLOSE") {
+            window.amp422 = $('#CH1-2').val(); //save value for opening later
+            WebSocketSend("SET;PulseProgrammer;PARAM 1 2 0" + '\n');
+            WebSocketSend("SET;PulseProgrammer;PARAM 1 0 0" + '\n');
+            $('#Shutter674').addClass("CLOSE").trigger("addClassCLOSE"); 
+        }
+    
+    } else if (shutter=="1092"){
+        if(state=="OPEN" && typeof window.amp1092 !== 'undefined'){
+            WebSocketSend("SET;PulseProgrammer;PARAM 2 2 " + window.amp1092 + '\n');
+            WebSocketSend("SET;PulseProgrammer;PARAM 2 0 " + window.freq1092 + '\n');
+            $('#Shutter1092').addClass("OPEN").trigger("addClassOPEN"); 
+        } else if(state=="CLOSE") {
+            window.amp1092 = $('#CH2-2').val();
+            WebSocketSend("SET;PulseProgrammer;PARAM 2 2 0" + '\n');
+            WebSocketSend("SET;PulseProgrammer;PARAM 2 0 0" + '\n');
+            $('#Shutter1092').addClass("CLOSE").trigger("addClassCLOSE"); 
+        } 
+    } else if (shutter=="1033"){
+        if(state=="OPEN"){
+            WebSocketSend("SET;PulseProgrammer;DigOut 1\n");
+            $('#Shutter1033').addClass("OPEN").trigger("addClassOPEN"); 
+        } else if(state=="CLOSE") {
+            WebSocketSend("SET;PulseProgrammer;DigOut 0\n");
+            $('#Shutter1033').addClass("CLOSE").trigger("addClassCLOSE"); 
+        }     
+    } else {
+        WebSocketSend("SET;Shutters;Shutter" + shutter + " " + state);
+    }
+}
+
+
+function ShuttersReceivedData(input){
+    // message form: STATUS;1412272142.82;Shutters;{"Shutter461": "CLOSE", "Shutter405": "OPEN"}
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+    for (var key in data2){
+        if(data2.hasOwnProperty(key)){
+            $('#' + key).addClass(data2[key]).trigger("addClass" + data2[key]);   
+        }
+    }
+    if (data2["Shutter405"] == data2["Shutter461"]){
+        $('#ShuttersPI').addClass(data2["Shutter405"]).trigger("addClass" + data2["Shutter405"]);
+    }
+    if ($('#CH1-0').val() != 0 && $('#CH1-2').val() != 0){
+        window.amp674 = $('#CH1-2').val();
+        window.freq674 = $('#CH1-0').val();
+        $('#Shutter674').addClass("OPEN").trigger("addClassOPEN");
+    } else {
+        $('#Shutter674').addClass("CLOSE").trigger("addClassCLOSE");
+    }
+    if ($('#CH0-0').val() != 0 && $('#CH0-2').val() != 0){
+        window.amp422 = $('#CH0-2').val();
+        window.freq422 = $('#CH0-0').val();
+        $('#Shutter422').addClass("OPEN").trigger("addClassOPEN");
+    } else {
+        $('#Shutter422').addClass("CLOSE").trigger("addClassCLOSE");
+    }
+    if ($('#CH2-2').val() != 0){
+        window.amp1092 = $('#CH2-2').val();
+        window.freq1092 = $('#CH2-0').val();
+        $('#Shutter1092').addClass("OPEN").trigger("addClassOPEN");
+    } else {
+        $('#Shutter1092').addClass("CLOSE").trigger("addClassCLOSE");
+    }
+    if ($('#DigOut').val() != 0){
+        $('#Shutter1033').addClass("OPEN").trigger("addClassOPEN");
+    } else {
+        $('#Shutter1033').addClass("CLOSE").trigger("addClassCLOSE");
+    }
+}
+</script>
+
+<strong>
+<table class="shuttertable">
+<tr>
+<td><div class="shutterbox OPEN" id="Shutter405">405</div></td>
+<td><div class="shutterbox OPEN" id="Shutter461">461</div></td>
+<td><div class="shutterbox OPEN" id="Shutter422">422</div></td>
+<td><div class="shutterbox OPEN" id="Shutter674">674</div></td>
+<td><div class="shutterbox OPEN" id="Shutter1092">1092</div></td>
+<td><div class="shutterbox OPEN" id="Shutter1033">1033</div></td>
+</tr><tr><th colspan=2 style="border-left: thin black solid; border-right: thin black solid; border-bottom: thin black solid">&nbsp;</td></tr><tr>
+<th colspan=2><center><div class="shutterbox OPEN" id="ShuttersPI">PI</div></center></th>
+<th colspan=3><center><div class="shutterbox OPEN" id="ShuttersALL">ALL</div></center></th>
+</tr>
+</table>
+</strong>
+

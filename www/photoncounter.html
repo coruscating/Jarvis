@@ -1,0 +1,236 @@
+<script type="text/javascript">
+$(function () {
+    $('.PhotonCounterField').spinner({
+        numberFormat: "n",
+        step: 0.01,
+        stop: function(event){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                WebSocketSend("SET;PhotonCounter;" + this.id + " " + this.value); 
+                return true;
+            }
+        }
+    });
+    
+    $('#IntTime').spinner({
+        min: 0,
+        max: 500
+    });
+    
+    $('#SampFreq').spinner({
+        min: 0,
+        max: 500
+    });
+    
+
+    $('#PhotonCounterPlot').highcharts({
+        chart: {
+            type: 'scatter',
+            backgroundColor:'transparent',
+            margin: [70, 60, 100, 80],
+            animation: false,
+            zoomType: 'xy'
+        },
+
+        plotOptions: {
+            series: {
+                lineWidth: 1,
+                marker: {
+                    radius: 2
+                }
+            }
+        },
+        
+        title:{
+            text:''
+        },
+                
+        xAxis: {
+            min: 0,
+            max: 300
+        },
+        
+        yAxis: [{
+            min: 0,
+            title: {
+                text: 'Counts'
+            }
+        }, {
+            min: 0,
+            opposite: true,
+            title: {
+                text: 'FFT'
+            },
+            max: 0.2
+        }],
+
+        navigation: {
+            buttonOptions: {
+                theme: {
+                   'stroke-width': 1,
+                    stroke: 'silver'
+                }
+            }
+        },
+
+        series: [{
+            name: 'counts',
+            yAxis: 0,
+            data: []
+        }, {
+            name: 'FFT',
+            yAxis: 1,
+            data: []
+        }]
+
+    });
+    $('#PhotonCounterPlot').hide();
+
+
+
+    $('.PhotonCounterCheck').click(function(){
+        if(this.checked){
+            WebSocketSend("SET;PhotonCounter;" + this.id + " ON"); 
+        } else {
+            WebSocketSend("SET;PhotonCounter;" + this.id + " OFF"); 
+        }
+    });
+
+    $('.onoffswitch-checkbox').change(function(){
+        if(this.checked){
+            // Add green shadow to ON state
+            $('label[for=' + this.id + ']').css("-webkit-box-shadow", "0 0 15px #00FF00");
+        } else {
+            $('label[for=' + this.id + ']').css("-webkit-box-shadow", "none");
+        }
+    });    
+
+    $('#PhotonCounterDialog').find('.onoffswitch-checkbox').click(function(){
+        if(this.checked){
+            WebSocketSend("SET;AgilentEQUSB;PhotonCounterVoltageLim 5.0\n");
+            WebSocketSend("SET;AgilentEQUSB;" + this.id + " ON"); 
+        } else {
+            WebSocketSend("SET;AgilentEQUSB;" + this.id + " OFF"); 
+        }
+    });
+
+});
+
+function AgilentEQUSBReceivedData(input){
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+
+    $('#PhotonCounterState').prop('checked', data2["PhotonCounterState"]);
+    $('#PhotonCounterState').trigger('change'); // Need to trigger event so shadow is added
+    
+}
+
+function PhotonCounterReceivedData(input){ 
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+    var ionthreshold=16000;
+    var goodionthreshold=60000;
+    var verygoodionthreshold=65000;
+
+
+    for (var key in data2){
+        if(data2.hasOwnProperty(key) && !($('#' + key).is(":focus"))){
+            if (key == 'MMAmp' || key =='MMPhase'){
+                $('#' + key).val(data2[key].toFixed(3)); 
+            } else {
+                $('#' + key).val(data2[key]);
+            }       
+        }
+
+    }
+    /*if(data2["Count"]>ionthreshold){
+        var audio = new Audio('sounds/boop.mp3');
+        audio.play();
+    }*/
+
+    if(data2["Count"]<=ionthreshold){
+        $('#PhotonCounterIon').html("<img src=images/noion.png title='No ion' width=30 height=30>");
+    } else if(data2["Count"]<=goodionthreshold){
+        $('#PhotonCounterIon').html("<img src=images/sadion.png title='Sad ion' width=30 height=30>");
+    } else if(data2["Count"]<=verygoodionthreshold){
+        $('#PhotonCounterIon').html("<img src=images/happyion.png title='Happy ion' width=30 height=30>");
+    } else {
+        $('#PhotonCounterIon').html("<img src=images/veryhappyion.png title='Very happy ion' width=30 height=30>");
+    }
+
+    if(data2["OverCount"]==true){
+        $('#PhotonCounterIon').html("<strong>OVER</strong>");
+    }
+
+    $('#DataState').prop('checked', data2["DataState"]);
+    
+    if(data2["DataState"] == true){
+        $('#PhotonCounterPlot').show();
+        var chart=$('#PhotonCounterPlot').highcharts();
+        var counts=data2['Data'].map(function(value,index) { return [value[0],value[1]]; });
+        var fft=data2['Data'].map(function(value,index) { return [value[0],value[2]]; });
+        /*if($('#UseFlot').val()==1){
+            var data3=[{
+                label: "Counts",
+                data: counts
+                }, {
+                label: "FFT",
+                data: fft
+            }];
+            $.plot($('#PhotonCounterPlot'),data3,{yaxes:[{min:0},{min:0}]});
+        }
+        else{*/
+            chart.series[0].setData(counts);
+            chart.series[1].setData(fft);
+        //}
+    } else {
+        $('#PhotonCounterPlot').hide();
+    }
+
+
+}
+</script>
+<table width=100% class="datatable">
+<tr>
+<td><label for="Count"><strong>Counts:</strong></label></td><td><input id="Count" value="0.00" type=text readonly>
+</td>
+<td>
+<div id="PhotonCounterIon"></div>
+</td>
+<td>
+         <center>
+<div class="onoffswitch">
+    <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox" id="PhotonCounterState">
+    <label class="onoffswitch-label" for="PhotonCounterState">
+        <span class="onoffswitch-inner"></span>
+        <span class="onoffswitch-switch"></span>
+    </label>
+</div>   
+</center>     
+</th>
+</tr><tr>
+<td>
+<label for="MMAmp">MM Amp:</label></td><td><input id="MMAmp" value="0.00" type=text></td>
+<td>
+<label for="MMPhase">MM Phase:</label></td><td><input id="MMPhase" value="0.00" type=text></td>
+</tr>
+<tr>
+<td>
+<label for="IntTime">Int. Time:</label></td><td><input id="IntTime" class="PhotonCounterField" value="0" style="display: inline;" title="in ms"></td>
+</td>
+<td><label for="SampFreq">Samp. Freq.:</label></td><td><input id="SampFreq" class="PhotonCounterField" value="0" style="display: inline;" title="in MHz"></td>
+</tr>
+
+<tr><td>
+<label for="Background">Bkg:</label>
+</td><td>
+<input type="checkbox" class="PhotonCounterCheck" id="Background">
+</td><td>
+<label for="DataState">Plot:</label></td><td>
+<input type="checkbox" class="PhotonCounterCheck" id="DataState">
+</center>
+</tr>
+</table>
+ 
+
+<div id="PhotonCounterPlot" style="width:100%;height:300px;"> </div>
+

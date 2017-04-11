@@ -1,0 +1,437 @@
+
+<!DOCTYPE html><meta charset="utf-8" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<html>
+<head><title>Jarvis 1.0</title>
+<link href="retro/css/retro/jquery-ui-1.9.0.custom.css" rel="stylesheet">   
+<link href="images/jarvis.ico" rel="icon" type="image/x-icon">
+<script src="retro/js/jquery-1.8.2.js"></script>
+<script src="jquery.gridster.js"></script>
+<script src="retro/js/jquery-ui-1.9.0.custom.js"></script>
+<script src="retro/js/jquery.cookie.js"></script>
+<link href='https://fonts.googleapis.com/css?family=Raleway:900' rel='stylesheet' type='text/css'>
+<script src="chart/highcharts.js"></script>
+<script src="chart/highcharts-more.js"></script>
+<script src="chart/heatmap.js"></script>
+<script src="chart/data.js"></script>
+<script src="chart/exporting.js"></script>
+<script src="chart/solid-gauge.src.js"></script>
+<link href="custom.css" rel="stylesheet">
+
+
+<!-- Widgets -->
+<script src="ws.js"></script>
+<script src="default.js"></script>
+<script type="text/javascript">
+
+$(function () {
+    // stop accidental closes
+    $(window).bind("beforeunload", function() { 
+        return "You're about to close Jarvis."; 
+    });
+
+    setInterval('updateClock()', 800); // clock
+
+    // dialog items go here
+    devItems = [ "Oven", "Bfield", "Powermeter","Wavemeter", "LaserController", "Newport","Comb","PhotonCounter","PulseProgrammer","Shutters","Camera","TrapElectrodesAgilent","FunctionGenerator","Oscilloscope","CavTemp1092", "IonPump", "QuAD", "SourceMeter"];    
+    utilItems = ["Plot",  "Logs", "Script", "Lock"];
+    allItems = devItems.concat(utilItems);
+    
+    // maps web dialog to device
+    window.deviceMap = {};
+    window.deviceMap["Shutters"] = "Shutters";
+    window.deviceMap["Oven"] = "AgilentBOUSB";
+    window.deviceMap["Bfield"] = "AgilentBOUSB";
+    window.deviceMap["Powermeter"] = "PowerMeter";
+    window.deviceMap["Wavemeter"] = "WaveMeter";
+    window.deviceMap["Newport"] = "Newport";
+    window.deviceMap["Comb"] = "Comb";
+    window.deviceMap["AgilentEQ"] = "AgilentEQUSB";
+    window.deviceMap["LaserController"] = "LaserController";
+    window.deviceMap["PhotonCounter"] = "PhotonCounter";
+    window.deviceMap["PulseProgrammer"] = "PulseProgrammer";
+    window.deviceMap["TrapElectrodesAgilent"] = "TrapElectrodesAgilent";
+    window.deviceMap["Camera"] = "Camera";
+    window.deviceMap["FunctionGenerator"] = "FunctionGenerator";
+    window.deviceMap["Oscilloscope"] = "Oscilloscope";
+    window.deviceMap["CavTemp1092"] = "CavityTemp1092";
+    window.deviceMap["IonPump"] = "IonPump";
+    window.deviceMap["QuAD"] = "QuAD";
+    window.deviceMap["SourceMeter"] = "SourceMeter";
+
+    // default size of widgets
+    window.widgetSize = {};
+    window.widgetSize["Shutters"] = [6,3];
+    window.widgetSize["Oven"] = [4,2];
+    window.widgetSize["Bfield"] = [4,6];
+    window.widgetSize["Powermeter"] = [5,4];
+    window.widgetSize["Wavemeter"] = [5,3];
+    window.widgetSize["Newport"] = [2,2];
+    window.widgetSize["Comb"] = [3,4];
+    window.widgetSize["Script"] = [6,6];
+    window.widgetSize["Logs"] = [7,4];
+    window.widgetSize["LaserController"] = [4,4];
+    window.widgetSize["PhotonCounter"] = [5,3];
+    window.widgetSize["PulseProgrammer"] = [12,4];
+    window.widgetSize["TrapElectrodesAgilent"] = [8,5];
+    window.widgetSize["Camera"] = [8,8];
+    window.widgetSize["FunctionGenerator"] = [4,2];
+    window.widgetSize["Oscilloscope"] = [4,4];
+    window.widgetSize["Plot"] = [5,5];
+    window.widgetSize["ThreadManager"] = [4,4];
+    window.widgetSize["Lock"]=[4,4];
+    window.widgetSize["CavTemp1092"]=[4,4];
+    window.widgetSize["IonPump"]=[4,4];
+    window.widgetSize["QuAD"]=[4,4];
+    window.widgetSize["SourceMeter"]=[4,4];
+    window.dimensions=[55,80];
+    window.margins=[5,5];
+
+    // user-friendly display labels
+    window.dispAlias = {};
+    window.dispAlias["Bfield"] = "Magnetic Field";
+    window.dispAlias["Newport"] = "Newport Lasers";
+    window.dispAlias["LaserController"] = "Laser Controller";
+    window.dispAlias["Powermeter"] = "Power Meter";
+    window.dispAlias["Comb"] = "Fiber Comb";
+    window.dispAlias["PhotonCounter"] = "Photon Counter";
+    window.dispAlias["PulseProgrammer"] = "Pulse Programmer";
+    window.dispAlias["TrapElectrodesAgilent"] = "Trap Electrodes";
+    window.dispAlias["Script"] = "Script Manager";
+    window.dispAlias["FunctionGenerator"] = "Function Generator";
+    window.dispAlias["CavTemp1092"] = "1092 Cavity Temp";
+    window.dispAlias["IonPump"] = "Ion Pump Supply";
+
+    for(var i=0; i<devItems.length; i++){
+        if (!window.dispAlias.hasOwnProperty(devItems[i])){
+            window.dispAlias[devItems[i]] = devItems[i];
+        }
+    }
+    for(var i=0; i<utilItems.length; i++){
+        if (!window.dispAlias.hasOwnProperty(utilItems[i])){
+            window.dispAlias[utilItems[i]] = utilItems[i];
+        }
+    }
+
+
+
+    // update intervals for devices
+    window.interval = {};
+    window.interval["Camera"] = 1;
+    
+
+
+    // update interval options, in seconds
+    var updateTimes = [0.1, 1, 3, 5];
+
+    // actions on spinners that are sent to server: up/down clicks, 
+    // enter, up key, down key, page up, page down
+    window.goodKeystrokes = [1, 13, 38, 40, 33, 34];
+    
+    // only refresh camera when the dialog is open
+    window.cameraon = true;
+
+    // generate menu  
+    var menucontent= '<h3 class="Settings util">Settings</h3><div><a href="javascript:OpenCloseDialogs(0); void(0);">Open all</a><br><a href="javascript:OpenCloseDialogs(1); void(0);">Close all</a></div>';
+    
+    
+    // websocket addresses
+    var wsList = ['ws://18.62.18.231:9999', 'ws://18.62.18.232:9990'];
+    var wsLabels = ['X88','Twins'];
+
+    var menucontent = menucontent + '<h3 class="Websocket off">Websocket server</h3> <div>Connect to: <select id=WebSocketAddr>';
+    
+    for(var j=0; j<wsList.length; j++){
+        menucontent = menucontent + '<option value="' + wsList[j] + '">' + wsLabels[j] + '</option>';
+    }
+    
+    menucontent = menucontent + '</select><br><a href="javascript:WebSocketStart(); void(0);">Run WebSocket</a> <br> <a href="javascript:WebSocketStop(); void(0);">Stop WebSocket</a> </div>';
+
+
+    if(typeof $.cookie('GridStatus') !== 'undefined'){
+        var gridstatus=JSON.parse($.cookie('GridStatus'));
+    } else { 
+        var gridstatus={};
+    }
+
+    var gridids=[];
+
+    // get list of dialogs already in the cookie
+    $.each(gridstatus, function() {
+        gridids.push(this.id);
+    });
+
+
+    // adding all items to menu
+    for(var i=0; i<allItems.length; i++){
+        if (i < devItems.length){ var dialogtype='DevDialog';} else { var dialogtype='UtilDialog'; }
+        menucontent=menucontent + '<h3 class="' + allItems[i] + ' off">';
+        var update=window.dispAlias[allItems[i]];
+        menucontent=menucontent + update;
+        
+        //menucontent=menucontent + "<img src=images/" + allItems[i] + ".png> ";
+
+        // if cookie of widget state doesn't exist, populate by default
+        if (gridids.indexOf("Grid" + allItems[i]) == -1){
+            $('#gridbody ul').append('<li id="Grid' + allItems[i] + '" class="ui-dialog ui-widget ui-widget-content ui-corner-all ui-draggable ui-resizable" data-row=1 data-col=' + (i+1).toString() + '  data-sizex=' + window.widgetSize[allItems[i]][0] + ' data-sizey=' + window.widgetSize[allItems[i]][1] + '><header><div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix"><span class="ui-dialog-title"><img src="images/' + allItems[i] + '.png" style="vertical-align: bottom;"> ' + update + '</span><a href="#" class="ui-dialog-titlebar-close ui-corner-all" onclick="CloseDialog(\'' + allItems[i] + '\');" role="button"><span class="ui-icon ui-icon-closethick">close</span></a></div></header><div class="Dialog ' + dialogtype + ' ui-dialog-content ui-widget-content" id="' + allItems[i] + 'Dialog" scrolltop=0 scrollleft=0 style="width: 100%; height: 100%;"></div><div class="gs-resize-handle gs-resize-handle-both ui-resizable-handle ui-resizable-se ui-icon ui-icon-gripsmall-diagonal-se ui-icon-grip-diagonal-se" style="z-index: 1000;"></div></li>');
+        
+
+        // load widget html file into dialogs
+        $('#' + allItems[i] + 'Dialog').load(allItems[i].toLowerCase() + '.html');
+        }
+
+        menucontent=menucontent + '</h3><div><input type="checkbox" id="' + allItems[i] + 'Check" class="' + dialogtype + 'Check" checked><label for="' + allItems[i] + 'Check">Show</label>';
+        
+        menucontent=menucontent + '&nbsp;<input type="checkbox" id="' + allItems[i] + 'Zoom"><label for="' + allItems[i] + 'Check">2x</label><div style="float:right;"><img src="images/refresh.png" style="vertical-align:middle;height:1em;cursor:pointer;" onclick="ReloadDialog(\'' + allItems[i] + '\');"></div>';
+    
+        // device widgets have additional options
+        if (i < devItems.length){
+            menucontent=menucontent + '<br>Update every <input class=interval value=1 onchange="changeinterval(this, \'' + allItems[i] + '\');"> s';
+
+             menucontent=menucontent + '<div class=ConnText id=ConnText' + allItems[i] + '><a href="javascript:WebSocketAddConn(\'' + window.deviceMap[allItems[i]] + '\'); void(0);">Connect</a></div>'; 
+         }
+        menucontent = menucontent + '</div>';
+    
+   }
+    
+
+    
+    $('#menu').html(menucontent);
+        $('.interval').spinner({
+        min: 0,
+        max: 100
+    });
+    jQuery.each( allItems, function( i, val ) {
+        $('#' + val + 'Check').click(function () {
+            if (this.checked){
+                //$('#' + val + 'Dialog').dialog('open');
+                if ($('#' + val + 'Check').hasClass("DevDialogCheck")){
+                    dialogtype="DevDialog";
+                } else { dialogtype="UtilDialog"; }
+                $('#Grid' + val).css("display", "inline");
+                $.cookie('Status' + val, 0, {expires: 365});
+
+                if(val=="Camera"){ window.cameraon=true; }
+            }
+            else{
+                $('#Grid' + val).css("display", "none");
+                if(val=="Camera"){ window.cameraon=false; }
+            }
+            return true;
+        });  
+        $('#' + val + 'Zoom').click(function () {
+            if (this.checked){
+                $("#" + val + "Dialog").css("zoom", "2");
+                $('#' + val + 'Dialog').dialog( "option", "width", "auto" );
+            }
+            else{
+                $("#" + val + "Dialog").css("zoom", "1");
+                $('#' + val + 'Dialog').dialog( "option", "width", "auto" );
+            }
+            return true;
+        }); 
+
+    });
+
+
+    gridster = $('#gridbody ul').gridster({
+        widget_margins: window.margins,
+        widget_base_dimensions: window.dimensions,
+        serialize_params: function($w, wgd) { 
+            return { 
+                   id: $($w).attr('id'), 
+                   col: wgd.col, 
+                   row: wgd.row, 
+                   size_x: wgd.size_x, 
+                   size_y: wgd.size_y 
+            };
+        },
+        draggable: {
+          handle: 'header *',
+          stop: function(e, ui, $widget) {
+                $.cookie('GridStatus',JSON.stringify(this.serialize()));
+          }
+        },
+        resize: {
+          enabled: true,
+          stop: function(e, ui, $widget) {
+                $.cookie('GridStatus',JSON.stringify(this.serialize()));
+          }
+        }
+    }).data('gridster');
+
+
+    // populate with states saved in cookie
+    $.each(gridstatus, function() {
+       var id=this.id.replace(/^Grid/, "");
+       if(devItems.indexOf(id)!=-1){ dialogtype="DevDialog"; }
+       else { dialogtype="UtilDialog"; }
+
+        gridster.add_widget('<li id="Grid' + id + '" class="ui-dialog ui-widget ui-widget-content ui-corner-all ui-draggable ui-resizable"><header><div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix"><span class="ui-dialog-title"><img src="images/' + id + '.png" style="vertical-align: bottom;"> ' + window.dispAlias[id] + '</span><a href="#" class="ui-dialog-titlebar-close ui-corner-all" onclick="CloseDialog(\'' + id + '\');" role="button"><span class="ui-icon ui-icon-closethick">close</span></a></div></header><div class="Dialog ' + dialogtype + ' ui-dialog-content ui-widget-content" id="' + id + 'Dialog" scrolltop=0 scrollleft=0 style="width: 100%; height: 100%;"></div><div class="gs-resize-handle gs-resize-handle-both ui-resizable-handle ui-resizable-se ui-icon ui-icon-gripsmall-diagonal-se ui-icon-grip-diagonal-se" style="z-index: 1000;"></div></li>', this.size_x, this.size_y, this.col, this.row);
+            // load widget html file into dialogs
+            $('#' + id + 'Dialog').load(id.toLowerCase() + '.html');
+    });
+
+
+
+
+    //initializing the accordion
+    $('#menu').accordion({
+        collapsible: true,
+        navigation: true,
+        heightStyle: "content",
+        active: false
+    });
+
+    for(var i=0; i<allItems.length; i++){
+        initializePosition(allItems[i]);
+    }
+
+
+    $(".ui-dialog-title").each(function() {
+        // get device dialogs for update times
+        dialogname = $(this).parent().parent().children(".DevDialog").attr("id");
+        if (typeof dialogname !== 'undefined') {
+            $(this).append(' - <span class=' + window.deviceMap[dialogname.replace('Dialog', '')] + 'Update>Not updated</span>');
+        }
+
+    });
+    
+
+
+    
+
+   
+});
+
+// 
+// close a single dialog, called by dialog close button
+function CloseDialog(id){
+    $('#Grid' + id).css("display", "none");
+    $('#' + id + 'Check').attr('checked', false);
+    if(id=="Camera"){
+        window.cameraon=false;
+    }
+    $.cookie('Status' + id, 1, {expires: 365});
+}
+
+function ReloadDialog(id){
+    $.ajax({
+        url: id.toLowerCase() + '.html',
+        cache: false,
+        dataType: "html",
+        success: function(data) {
+            $('#' + id + "Dialog").html(data);
+        }
+    });
+}
+
+
+function initializePosition(id){
+    if($.cookie('Status' + id) == 1){
+        CloseDialog(id);
+    }
+}
+
+// change update interval of device
+function changeinterval(interval,name){
+    WebSocketSend('SET;' + window.deviceMap[name] + ';UPDATEINTERVAL ' + interval.value);
+    window.interval[name]=interval.value;
+}
+
+// open/close all dialogs
+function OpenCloseDialogs(state){
+    if (state==0){
+        $('.ui-dialog').css("display", "inline");
+        $('.UtilDialogCheck').attr('checked', true);
+        $('.DevDialogCheck').attr('checked', true);
+    } else {
+        $('.ui-dialog').css("display", "none");
+        $('.UtilDialogCheck').attr('checked', false);
+        $('.DevDialogCheck').attr('checked', false);
+    }
+    // update cookies
+    for(var i=0; i<allItems.length; i++){
+        $.cookie('Status' + allItems[i], state, {expires: 365});
+    }
+}
+
+// UTILITY FUNCTIONS FOR ALL SCRIPTS BELOW
+
+// converts timestamp to human time
+function Timestamp(input){
+    var date = new Date(input*1000);
+    var hours = date.getHours();
+    var minutes = "0" + date.getMinutes();
+    var seconds = "0" + date.getSeconds();
+
+    // will display time in 10:30:23 format
+    var formattedTime = date.getMonth() + '/' + date.getDate() +' ' + date.getHours() + ':' + minutes.substr(minutes.length-2) + ':' + seconds.substr(seconds.length-2);
+    return formattedTime;
+}
+
+// ID names with periods in them need double backslash \\ before period to escape
+function Escape(input){
+    return input.replace( /(:|\.|\[|\]|,)/g, "\\$1" );
+}
+
+function changeColors(){
+    
+    if ($("#logo").html()=="Ultron"){
+            $("#logo").html("Jarvis");
+            document.documentElement.style.webkitFilter = 'invert(0%)';
+    } else {
+            $("#logo").html("Ultron");
+            document.documentElement.style.webkitFilter = 'invert(100%)';
+    }
+}
+
+function updateClock ()
+    {
+    var currentTime = new Date ( );
+    var currentHours = currentTime.getHours ( );
+    var currentMinutes = currentTime.getMinutes ( );
+    var currentSeconds = currentTime.getSeconds ( );
+
+    // Pad the minutes and seconds with leading zeros, if required
+    currentMinutes = ( currentMinutes < 10 ? "0" : "" ) + currentMinutes;
+    currentSeconds = ( currentSeconds < 10 ? "0" : "" ) + currentSeconds;
+
+    // Choose either "AM" or "PM" as appropriate
+    var timeOfDay = ( currentHours < 12 ) ? "AM" : "PM";
+
+    // Convert the hours component to 12-hour format if needed
+    currentHours = ( currentHours > 12 ) ? currentHours - 12 : currentHours;
+
+    // Convert an hours component of "0" to "12"
+    currentHours = ( currentHours == 0 ) ? 12 : currentHours;
+
+    // Compose the string for display
+    var currentTimeString = currentHours + ":" + currentMinutes + ":" + currentSeconds + " " + timeOfDay;
+    
+    
+    $("#clock").html("&nbsp;&nbsp;" + currentTimeString);
+        
+ }
+
+</script>
+</head>
+<body>
+
+<div id="workingwindow">
+<div id="gridbody">
+<ul id="gridbodyul">
+</ul>
+</div>
+<div id="menuwrapper">
+<div id="logowrapper"><div id="logo">Jarvis</div><div id="experiment"></div></div>
+<div id=clock></div><button onclick="WebSocketSend('RUN;blog_screenshot')">Blog!</button>
+<a href="#" onclick="changeColors();"><img src="images/light.png" id=lightStatus></a>
+<div id="menu"></div></div>
+</div>
+
+</body>
+</html>
+

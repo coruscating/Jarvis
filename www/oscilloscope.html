@@ -1,0 +1,49 @@
+<script type="text/javascript">
+$(function () {
+    $('.OscilloscopeField').spinner({
+        min: 0,
+        max: 2,
+        numberFormat: "n",
+        step: 0.01,
+        stop: function(){ // update device when spinner has stopped spinning
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                WebSocketSend("SET;AgilentBO;" + this.id + " " + this.value);
+            }
+        }
+    });
+});
+
+function OscilloscopeReceivedData(input){ 
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+    for (var key in data2){
+        if(data2.hasOwnProperty(key) && !($('#' + key).is(":focus"))){
+        $('#' + key).val(parseFloat(data2[key]).toFixed(3));
+        }
+    }
+}
+
+</script>
+<table width=100% class="datatable">
+  <tr>
+    <td>Channel 1</td>
+    <td><label for="CH1PP">PK2PK </label><input id="CH1PP" value="0.00" type=text></td>
+    <td><label for="CH1MEAN">mean </label><input id="CH1MEAN" value="0.00" type=text></td>
+  </tr>
+  <tr>
+    <td>Channel 2</td>
+    <td><label for="CH2PP">PK2PK </label><input id="CH2PP" value="0.00" type=text></td>
+    <td><label for="CH2MEAN">mean </label><input id="CH2MEAN" value="0.00" type=text></td>
+  </tr>
+  <tr>
+    <td>Channel 3</td>
+    <td><label for="CH3PP">PK2PK </label><input id="CH3PP" value="0.00" type=text></td>
+    <td><label for="CH3MEAN">mean </label><input id="CH3MEAN" value="0.00" type=text></td>
+  </tr>
+  <tr>
+    <td>Channel 4</td>
+    <td><label for="CH4PP">PK2PK </label><input id="CH4PP" value="0.00" type=text></td>
+    <td><label for="CH4MEAN">mean </label><input id="CH4MEAN" value="0.00" type=text></td>
+  </tr>
+</table>
+<div id="OscilloscopeTime"></div>

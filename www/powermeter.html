@@ -1,0 +1,143 @@
+<script type="text/javascript">
+$(function () {
+    $("#PowermeterFreqMenu").buttonset();
+    
+    $("#PowermeterFreqMenu input[type=radio]").change(function(){
+        WebSocketSend("SET;PowerMeter;WAVELENGTH " + this.value);
+    });
+    
+    
+    var gaugeOptions = {
+        chart: {
+            type: 'solidgauge',
+            backgroundColor:'transparent',
+            animation: false
+        },
+        
+        title: null,
+
+        pane: {
+            center: ['50%', '85%'],
+            size: '140%',
+            startAngle: -90,
+            endAngle: 90,
+            background: {
+                backgroundColor: (Highcharts.theme && Highcharts.theme.background2) || '#EEE',
+                innerRadius: '60%',
+                outerRadius: '100%',
+                shape: 'arc'
+            }
+        },
+
+        tooltip: {
+            enabled: false
+        },
+
+        // the value axis
+        yAxis: {
+            stops: [
+                [0.1, '#DF5353'], // red
+                [0.5, '#DDDF0D'], // yellow
+                [0.9, '#55BF3B'] // green
+            ],
+            lineWidth: 0,
+            minorTickInterval: 'auto',
+            tickPixelInterval: 400,
+            tickWidth: 0,
+            title: {
+                y: -70
+            },
+            labels: {
+                y: 16
+            }
+        },
+
+        plotOptions: {
+            solidgauge: {
+                dataLabels: {
+                    y: 5,
+                    borderWidth: 0,
+                    useHTML: true
+                }
+            }
+
+        }
+
+    };
+
+    $('#container-speed').highcharts(Highcharts.merge(gaugeOptions, {
+        yAxis: {
+            min: 0,
+            max: 100
+
+        },
+
+
+
+        credits: {
+            enabled: false
+        },
+
+        series: [{
+            name: 'Power',
+            data: [0],
+            dataLabels: {
+                format: '<div style="text-align:center"><span style="font-size:28px;color:' +
+                    ((Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black') + '">{y:.3f}</span><br/>' +
+                       '<span>uW</span></div>'
+            },
+            tooltip: {
+                valueSuffix: ' uW'
+            }
+        }]
+
+    }));
+    
+   
+});
+
+function PowerMeterReceivedData(input){
+    // message form: STATUS;1409688255.76;PowerMeter;{"PowerMeterWavelength": 1092.0, "PowerMeterMaxPower": 0.0055, "PowerMeterPower": 9.37685672e-06, "PowerMeterMinPower": 5.5e-08}
+    var chart = $('#container-speed').highcharts();
+    var point;
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+    if (chart){
+        point = chart.series[0].points[0];     
+        var power = parseFloat(data2["PowerMeterPower"]);
+        if (power <= 0){
+            power=0;
+        }
+        //power = power*10e5;
+        // scale gauge maximum to nearest higher power of 10
+        chart.yAxis[0].setExtremes(0,Math.pow(10,Math.ceil(Math.log(power)/Math.LN10)));
+    
+        point.update(power);
+    }
+    $('#PowermeterFreq' + parseInt(data2["PowerMeterWavelength"])).attr("checked", true); // fix this too
+    $('#PowermeterFreqMenu').buttonset("refresh");
+}
+
+
+</script>
+
+<form>
+
+    <div id="PowermeterFreqMenu">
+    <input type="radio" id="PowermeterFreq405" name="radio" value="405"><label for="PowermeterFreq405">405</label>
+    <input type="radio" id="PowermeterFreq408" name="radio" value="408"><label for="PowermeterFreq408">408</label>    
+    <input type="radio" id="PowermeterFreq422" name="radio" value="422"><label for="PowermeterFreq422">422</label>
+    <input type="radio" id="PowermeterFreq461" name="radio" value="461"><label for="PowermeterFreq461">461</label>
+    <input type="radio" id="PowermeterFreq674" name="radio" value="674"><label for="PowermeterFreq674">674</label>
+    <input type="radio" id="PowermeterFreq1033" name="radio" value="1033"><label for="PowermeterFreq1033">1033</label>
+    <input type="radio" id="PowermeterFreq1092" name="radio" value="1092"><label for="PowermeterFreq1092">1092</label>
+    
+    
+    </div>
+</form>
+
+
+      
+      
+     <div id="container-speed" style="width: 300px; height:200px;"></div>
+   

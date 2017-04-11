@@ -1,0 +1,481 @@
+<script type="text/javascript">
+$(function () {
+
+    PulseProgrammerInitialize();
+    
+    var pulselabel=["422", "674", "1092"];
+    
+    pulsetable = '<table width=40% class="datatable">';
+    for(i=0;i<=2;i++){
+        pulsetable = pulsetable + '<tr><td><strong>Ch' + i + ' ' + pulselabel[i] + '</strong></td><td>Freq</td>';
+        pulsetable = pulsetable + '<td><input id="CH' + i + '-0" class="PulseProgrammerField PulseProgrammerFreq oneplace" value="0" title="in MHz"></td>';
+        pulsetable = pulsetable + '<td>Ph mode:</td><td><select class=PulseProgrammerPh id="CH' + i + '-1">';
+        pulsetable = pulsetable + '<option value="0">Coherent<option value="1">Continuous<option value="2">Off</select></td>';
+        pulsetable = pulsetable + '<td>Amp:</td><td><input id="CH' + i + '-2" class="PulseProgrammerField PulseProgrammerAmpPhase oneplace" value="0"></td>';
+        pulsetable = pulsetable + '<td>Phase:</td><td><input id="CH' + i + '-3" class="PulseProgrammerField PulseProgrammerAmpPhase oneplace" value="0"></td>';
+        pulsetable = pulsetable + '<td><button onclick="WebSocketSend(\'SET;PulseProgrammer;PARAM ' + i + ' 2 0\\n\');WebSocketSend(\'SET;PulseProgrammer;PARAM ' + i + ' 0 0\\n\')">Zero</button></tr>';
+    }
+
+   /* for(i=0;i<=3;i++){
+
+        pulsetable = pulsetable + '<tr><td><strong>Ch3-' + i + '</strong></td>';
+        pulsetable = pulsetable + '<td>Freq</td><td><input id="CH3-' + i*4 + '" class="PulseProgrammerField PulseProgrammerFreq oneplace" value="0"></td>';
+        pulsetable = pulsetable + '<td>Ph mode:</td><td><select class=PulseProgrammerPh id="CH3-' + (i*4+1) + '">';
+        pulsetable = pulsetable + '<option value="0">Coherent<option value="1">Continuous<option value="2">Off</select></td>';
+        pulsetable = pulsetable + '<td>Amp:</td><td><input id="CH3-' + (i*4+2) + '" class="PulseProgrammerField PulseProgrammerAmpPhase oneplace" value="0"></td>';
+        pulsetable = pulsetable + '<td>Phase:</td><td><input id="CH3-' + (i*4+3) + '" class="PulseProgrammerField PulseProgrammerAmpPhase oneplace" value="0"></td>';
+        pulsetable = pulsetable + '<td><button onclick="WebSocketSend(\'SET;PulseProgrammer;PARAM 3 ' + (i*4) + ' 0\\n\');WebSocketSend(\'SET;PulseProgrammer;PARAM 3 ' + (i*4+2) + ' 0\\n\')">Zero</button></tr>';
+    }*/
+
+
+    pulsetable += '<tr><td></td><td>Dig Out</td><td><input id="DigOut" value=0></td><td>Clock</td><td><input id=clock_working type=text value=0 readonly></td><td>Counter</td><td><input id=clock_counter type=text value=0 readonly></td><td>Debug</td><td><input id="read_word" type=text readonly></td></tr><tr><td></td><td>PMT</td><td><input id=pmt_data type=text value=0 readonly></td></tr></table>';
+    $('#pulsewrapper').html(pulsetable);
+
+    $(".PulseProgrammerPh").on('change', function(){
+        var param = this.id.replace("CH","").split("-");
+        WebSocketSend("SET;PulseProgrammer;PARAM " + param[0] + " " + param[1] + " " + this.value); 
+     });
+
+    
+    $('.PulseProgrammerField').spinner({
+        numberFormat: "n",
+        step: 1,
+        stop: function(event){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                var param = this.id.replace("CH","").split("-");
+                WebSocketSend("SET;PulseProgrammer;PARAM " + param[0] + " " + param[1] + " " + this.value); 
+                return true;
+            }
+        }
+    });
+    
+    $('.PulseProgrammerFreq').spinner({
+        min: 0.0,
+        max: 400.0,
+        step: 1,
+        numberFormat: "N2"
+    });
+    
+    $('.PulseProgrammerAmpPhase').spinner({
+        min: 0.0,
+        max: 65535.0,
+        step: 1000
+    });
+    
+
+
+
+    $('#DigOut').spinner({
+        min: 0,
+        max: 15,
+        step: 1,
+        stop: function(event){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                WebSocketSend("SET;PulseProgrammer;DigOut " + this.value); 
+                return true;
+            }
+        }
+    });
+
+
+
+    $("#PulseProgrammerRun").click(function(){
+        WebSocketSend("SET;PulseProgrammer;RUNPROG prog/" + $("#PulseProgrammerLoad").val());
+        $("#pulsewrapper").css({ opacity: 0.5 });
+    });
+
+    $("#PulseProgrammerStop").click(function(){
+        WebSocketSend("SET;PulseProgrammer;STOPPROG");
+    });
+
+    $("#PulseProgrammerGracefulStop").click(function(){
+        WebSocketSend("SET;PulseProgrammer;RUNPROG prog/Reset.cpp");
+    });
+
+    $("#PulseProgrammerReset").click(function(){
+        WebSocketSend("SET;PulseProgrammer;RESET");
+    });
+
+    $("#PulseProgrammerResetPLL").click(function(){
+        WebSocketSend("SET;PulseProgrammer;reset_pll");
+    });
+
+    $("#PulseProgrammerReadout").click(function(){
+        WebSocketSend("SET;PulseProgrammer;SPECIALREQUEST READOUT");   
+    });
+
+    $("#PulseProgrammerPMTReadout").click(function(){
+        WebSocketSend("SET;PulseProgrammer;SPECIALREQUEST PMTREADOUT");
+    });
+
+    $("#PulseProgrammerInit").click(function(){
+        WebSocketSend("SET;PulseProgrammer;initFPGA");
+    });
+
+    $("#PulseProgrammerLoadIon").click(function(){
+        WebSocketSend("SET;PulseProgrammer;RUNPROG prog/Load.cpp")
+    });
+
+    $('#PulseProgrammerShowPlot').click(function(){
+        if(this.checked){
+            $('#PulseProgrammerPlot').show();
+        } else {
+            $('#PulseProgrammerPlot').hide();
+        }
+    });
+
+    PulseProgrammerRefresh();
+    window.PulseProgrammerFlag=0; // flag to make sure we readout fully at the end of each script
+
+
+
+});
+
+
+function PulseProgrammerSave(){
+    PulseProgrammerRefresh();
+    log(PLOT, 'saving to' + $('#PulseProgrammerFile').val());
+
+    $.ajax({
+        url: "logtofile.php",
+        type: "post",
+        data: { 
+            plotdata: helpers + '\n' + $('#PulseProgrammerPlotData').html(),
+            filename: $('#PulseProgrammerFile').val()
+        },
+        success: function (data){
+            $('#PulseProgrammerSaveStat').html(data);
+            $('#PulseProgrammerSaveStat').show().fadeOut(2000);
+        },
+        error:function(){
+            alert("failure");
+        }   
+    }); 
+}
+
+
+// loads variables in header of HELPERS.h
+function PulseProgrammerRefresh(){
+    $.get('ddslib/HELPERS.h',{ "_": $.now() },  function(data) {
+    var data2=data.split("GLOBAL VARIABLES");
+    data2=data2[1];
+    var data3=data2.replace(/define/g,"");
+    data3=data3.replace(/\/\/.*/g,"");
+    data3=data3.replace(/^\s*\n/gm,"");
+    helpers=data3;
+   $('#PulseProgrammerHelper').html("<pre>" + data3 + "</pre>");
+}, 'text');
+}
+
+function PulseProgrammerInitialize(){
+    $("#PulseProgrammerLoad").html('');
+    //var dir = "/Dropbox/Quanta/Software/GitHub/ddscon17/prog/";
+    var dir = "prog/";
+    var fileextension=".cpp";
+    $.ajax({
+        url: dir,
+        cache: false,
+        success: function (data) {
+            // hacky way to get file directory listing
+            $(data).find("a[href$=cpp]").each(function () {
+                var filename = decodeURIComponent(this.href.split('/').pop());
+                $("#PulseProgrammerLoad").append("<option value='" + filename + "'>" + filename);
+            });
+        }
+    });
+}
+
+
+function PulseProgrammerReceivedData(input){ 
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+    if(typeof data2 === 'number' && $('#PulseProgrammerAutoPMTReadout').val()!=0){ // multi-frame message, for now only PMT readout so don't worry about it if we're not going to plot it
+        if(typeof window.PulseProgrammerReadoutQueue == 'undefined'){ // new readout
+            window.PulseProgrammerReadoutQueue=[];
+            window.PulseProgrammerReadoutQueue["id"]=string[1];
+            window.PulseProgrammerReadoutQueue["num"]=parseInt(string[4]); // total number of pieces
+            window.PulseProgrammerReadoutQueue[parseInt(string[3])]=string[5]; // add first piece to array
+            return(0);
+        }
+        else if (string[1]==window.PulseProgrammerReadoutQueue["id"]){ // already saw a piece of this
+            window.PulseProgrammerReadoutQueue[parseInt(string[3])]=string[5];
+            completeflag=true;
+            for (i=0;i<window.PulseProgrammerReadoutQueue["num"];i++){ // check if we've got all the pieces
+                if (typeof window.PulseProgrammerReadoutQueue[i] == 'undefined'){ // don't have all the pieces yet
+                    completeflag=false;
+                    break;
+                }
+            }
+            if (completeflag==true){ // have all the pieces, proceed
+                data2="";
+                for (i=0;i<window.PulseProgrammerReadoutQueue["num"];i++){ // assemble pieces
+                    data2+=window.PulseProgrammerReadoutQueue[i];
+                }
+                data2=JSON.parse(data2);
+                delete window.PulseProgrammerReadoutQueue; // free the pieces from memory
+            } else {
+                return(0);
+            }
+        } else { // there's a new readout, toss the old one
+            delete window.PulseProgrammerReadoutQueue;
+            window.PulseProgrammerReadoutQueue=[];
+            window.PulseProgrammerReadoutQueue["id"]=string[1];
+            window.PulseProgrammerReadoutQueue["num"]=parseInt(string[4]);
+            window.PulseProgrammerReadoutQueue[parseInt(string[3])]=string[5];
+            return(0);
+        }
+    }
+
+    
+    //var readout=0;
+    for (var key in data2){
+        if (key=='clock_working'){
+            if(data2['clock_working'] != 15){
+                $('#clock_working').css("background-color","rgb(205, 109, 91)");
+            } else {
+                $('#clock_working').css("background-color","#c4bfae");
+            }
+        }
+        if (key=='PP_status'){
+            if(data2['PP_status']=='AVR'){ // script running
+                window.PulseProgrammerFlag=1;
+                if ($('#PulseProgrammerAutoReadout').val()==2){
+                    WebSocketSend("SET;PulseProgrammer;SPECIALREQUEST READOUT"); // auto readout
+                    //$('#PulseProgrammerLoad').val(data2['codefile'].split('/')[1]);
+                }
+                if ($('#PulseProgrammerAutoPMTReadout').val()==2){
+                    WebSocketSend("SET;PulseProgrammer;SPECIALREQUEST PMTREADOUT"); // auto readout
+                }
+                $("#pulsewrapper").css({ opacity: 0.5 });
+            }
+            else{
+                if(window.PulseProgrammerFlag==1){
+                    var audio = new Audio('sounds/boop.mp3');
+                    audio.play();
+                    if ($('#PulseProgrammerAutoReadout').val()==1){
+                    WebSocketSend("SET;PulseProgrammer;SPECIALREQUEST READOUT"); // auto readout
+                    //$('#PulseProgrammerLoad').val(data2['codefile'].split('/')[1]);
+                    } else if ($('#PulseProgrammerAutoReadout').val()==2){
+                        WebSocketSend("SET;PulseProgrammer;SPECIALREQUEST PMTREADOUT"); // auto readout
+                    }
+                    window.PulseProgrammerFlag=0;
+                }
+                $("#pulsewrapper").css({ opacity: 1 });
+            }
+        }
+
+        if (key=="PMTREADOUT"){ // graph data
+            //console.log(data2['PMTREADOUT']);
+            //data3=String.fromCharCode.apply(null, new Uint8Array(data2['PMTREADOUT']));
+            //console.log(data3);
+
+        
+            var graph=data2['PMTREADOUT'];
+            var endele=graph.length-1;
+            //readout=1;
+            i=0;
+
+            /*for(i=endele;i>=0;i--){ // trim all the zeros at end of data
+                if(graph[i][1]==0){
+                   endele--; 
+                } else {
+                    break;
+                }
+            }
+            graph=graph.slice(0,endele+1);
+            $('#PulseProgrammerPlotData').html(JSON.stringify(graph));*/
+
+            if ($('#PulseProgrammerAutoPMTReadout').val()!=0){ // only plot if we're supposed to, it takes a lot of resources
+                if($('#UseFlot').val()==1){
+                    PulseProgrammerFlotPlot(graph);
+                }
+                else{
+                    $('#PulseProgrammerPlot').highcharts({
+                        title: {
+                                text: '',
+                            },
+                        chart:{
+                            type: 'scatter',
+                            backgroundColor:'transparent',
+                            animation: false,
+                            zoomType: 'xy'
+                        },
+                        plotOptions:{
+                            scatter:{
+                                lineWidth:2
+                            }
+                        },
+                        series:[{  
+                                animation: false,
+                                data: graph
+                        }]
+                    });
+                }
+            }
+        }
+
+        if (key=="READOUT"){ // graph data
+            var graph=data2['READOUT'];
+            var endele=graph.length-1;
+            //readout=1;
+            i=0;
+
+            $('#PulseProgrammerPlotData').html(JSON.stringify(graph));
+
+            if ($('#PulseProgrammerAutoReadout').val()!=0){
+                if($('#UseFlot').val()==1){
+                    PulseProgrammerFlotPlot(graph);
+                } else { // highcharts
+                    $('#PulseProgrammerPlot').highcharts({
+                        title: {
+                                text: '',
+                            },
+                        chart:{
+                            type: 'scatter',
+                            backgroundColor:'transparent',
+                            animation: false,
+                            zoomType: 'xy'
+                        },
+                        plotOptions:{
+                            scatter:{
+                                lineWidth:2,
+                                connectNulls: false
+                            }
+                        },
+                        series:[{  
+                                animation: false,
+                                data: graph
+                        }]
+                    });
+                }
+            }
+        }
+        else if(data2.hasOwnProperty(key) && !($('#' + key).is(":focus"))){
+            $('#' + key).val(parseFloat(data2[key]).toFixed(2));
+            $('#' + key + '.PulseProgrammerPh').val(parseInt(data2[key]));
+        }
+    }
+
+
+}
+
+function PulseProgrammerFlotPlot(data){
+    console.log("flot plot")
+    var placeholder=$("#PulseProgrammerPlot");
+    placeholder.bind("plotpan", function (event, plot) {
+    var axes = plot.getAxes();
+    $(".message").html("Panning to x: "  + axes.xaxis.min.toFixed(2)
+    + " &ndash; " + axes.xaxis.max.toFixed(2)
+    + " and y: " + axes.yaxis.min.toFixed(2)
+    + " &ndash; " + axes.yaxis.max.toFixed(2));
+    });
+
+    placeholder.bind("plotzoom", function (event, plot) {
+        var axes = plot.getAxes();
+        $(".message").html("Zooming to x: "  + axes.xaxis.min.toFixed(2)
+        + " &ndash; " + axes.xaxis.max.toFixed(2)
+        + " and y: " + axes.yaxis.min.toFixed(2)
+        + " &ndash; " + axes.yaxis.max.toFixed(2));
+    });
+
+    $("#PulseProgrammerPlot").bind("plotselected", function (event, ranges) {
+        var axes=plot.getAxes(), xaxis=axes.xaxis.options,yaxis=axes.yaxis.options;
+        xaxis.min=ranges.xaxis.from;
+        xaxis.max=ranges.xaxis.to;
+        yaxis.min=ranges.yaxis.from;
+        yaxis.max=ranges.yaxis.to;
+
+        plot.setupGrid();
+        plot.draw();
+        plot.clearSelection();
+        $("#PulseProgrammerPlot > input").remove(); // get rid of previous zoom button
+        $("<input type='button' style='position:absolute;right:20px;top:20px;' value='Zoom Out'>")
+            .appendTo(placeholder)
+            .click(function (event) {
+                event.preventDefault();
+                var axes=plot.getAxes(), xaxis=axes.xaxis.options,yaxis=axes.yaxis.options;
+                xaxis.min=null;
+                xaxis.max=null;
+                yaxis.min=null;
+                yaxis.max=null;
+                plot.setupGrid();
+                plot.draw();
+                $(this).remove();
+        });
+    });
+    var plot=$.plot($('#PulseProgrammerPlot'),[data],{
+        series: {
+            lines: {
+                show: true,
+                lineWidth: 1
+            },
+            shadowSize: 0,
+            points: {
+                show: true
+            }
+        },
+        colors: ["#0022ff"],
+        grid: {
+            hoverable: true,
+            clickable: true
+        },
+        selection: {
+            mode: "xy"
+        }
+    });
+    placeholder.bind("plothover", function (event, pos, item) {
+        if (item) {
+            var x = item.datapoint[0].toFixed(2),
+                y = item.datapoint[1].toFixed(2);
+
+            $("#pulseprogrammertooltip").html("(" + x + "," + y + ")")
+                .css({top: item.pageY+5, left: item.pageX+5})
+                .fadeIn(200);
+        } else {
+            $("#pulseprogrammertooltip").hide();
+        }
+    });
+
+}
+
+</script>
+<div id=PulseProgrammerHelper style="width: 280px;height: 205px;float:right;overflow: scroll;"></div>
+<div>
+<div id=pulsewrapper>
+</div>
+
+<select id="PulseProgrammerLoad"></select><img src='images/refresh.png' style='vertical-align:middle;height:1em;cursor:pointer;' onclick='PulseProgrammerInitialize();'>
+<input type=button value='Run Script' id='PulseProgrammerRun'>
+<input type=button value='Stop Script' id='PulseProgrammerStop'>
+<input type=button value='Graceful Stop' id='PulseProgrammerGracefulStop'>
+<input type=button value='Reset' id='PulseProgrammerReset'>
+<input type=button value='Load' id='PulseProgrammerLoadIon'>
+<input type=button value='Initialize' id='PulseProgrammerInit'>
+<input type=button value='Reset PLL' id='PulseProgrammerResetPLL'><br>
+<select id="PulseProgrammerPlotLine">
+<option value=0>Scatter Plot</option>
+<option value=1>Line Plot</option>
+</select>
+<input type=button value='Readout' id='PulseProgrammerReadout'>
+<input type=button value='PMT Readout' id='PulseProgrammerPMTReadout'>
+
+<select id="PulseProgrammerAutoReadout">
+<option value=0>Manual readout, no plot</option>
+<option value=1 selected>Manual readout, plot</option>
+<option value=2>Auto readout</option>
+</select>
+
+<select id="PulseProgrammerAutoPMTReadout">
+<option value=0 selected>Manual PMT readout, no plot</option>
+<option value=1>Manual PMT readout, plot</option>
+<option value=2>Auto PMT readout</option>
+</select>
+
+<input type=button value='Refresh HELPERS' onclick='PulseProgrammerRefresh();'><br>
+<input value='ddsconplot' id='PulseProgrammerFile'>
+<input type=button value='Save Data' onclick='PulseProgrammerSave();'>
+<span id=PulseProgrammerSaveStat></span>
+<br>
+<div id=PulseProgrammerPlot style="width:1013px;height:452px"></div>
+<div id=PulseProgrammerPlotData style='width: 100%; word-wrap: break-word;'></div>
+</div>

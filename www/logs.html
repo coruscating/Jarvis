@@ -1,0 +1,76 @@
+<script type="text/javascript">
+var ERROR = 'error';
+var NOTE = 'highlight';
+var OUTPUT = 'output';
+var PLOT = 'plot';
+var SPEAK = 'speak';
+var icon={};
+icon["error"]="alert";
+icon["highlight"]="info";
+icon["output"]="play";
+icon["plot"]="signal";
+icon["speak"]="signal";
+
+$(function () {
+    $('#ClearLog').button().click(function() {
+        $("#output").fadeOut("fast", function(){$(this).empty();$(this).fadeIn();});
+        return false;
+    });
+      
+    $('#logSpin').spinner({
+        min: 0,
+        max: 1000
+    });
+
+    for(var i=0; i<devItems.length; i++){
+        $('#logChecks').append('<div style="background-color:#39a5bc;color:#fff;float:left;height:30px;line-height:30px;padding:0 5px 0 2px;"><input type=checkbox id="' + window.deviceMap[devItems[i]] + 'LogCheck">' + window.dispAlias[devItems[i]] + '</div>');
+    }
+    
+    $('#logChecks').append('<hr>');
+});
+
+
+
+function log(type, message, device){
+    if ($('#' + type + 'Check').attr('checked')){
+        if (type != 'plot' && device){
+            if ($('#' + device + 'LogCheck').attr('checked')){
+            // fancy schmancy code to add entry to top of log with animation
+            var wrapping='<div class="ui-state-' + type + ' ui-corner-all outputentry" style="margin-top: 10px; padding: 0em .1em;  vertical-align:top;"><p style="vertical-align:top; padding: 0px;"><span class="ui-icon ui-icon-' + icon[type] + '" style="float: left; margin-right: .3em;vertical-align:top;"></span>';
+            
+            // save the place we were scrolled to
+            var scroll = $("#LogsDialog").scrollTop();    
+        	$(wrapping + arguments.callee.caller.name + ': ' + message + "</p></div>").hide().prependTo($("#output")).slideDown('fast');
+            // go back to place we were scrolled to
+            $("#LogsDialog").scrollTop(scroll);
+            $(".outputentry:gt(" + $('#logSpin').val() + ")").remove(); // prune long logs
+            }
+        } else {
+            // fancy schmancy code to add entry to top of log with animation
+            var wrapping='<div class="ui-state-' + type + ' ui-corner-all outputentry" style="margin-top: 10px; padding: 0em .1em;  vertical-align:top;"><p style="vertical-align:top; padding: 0px;"><span class="ui-icon ui-icon-' + icon[type] + '" style="float: left; margin-right: .3em;vertical-align:top;"></span>';
+            
+            // save the place we were scrolled to
+            var scroll = $("#LogsDialog").scrollTop();    
+            $(wrapping + arguments.callee.caller.name + ': ' + message + "</p></div>").hide().prependTo($("#output")).slideDown('fast');
+            // go back to place we were scrolled to
+            $("#LogsDialog").scrollTop(scroll);
+            $(".outputentry:gt(" + $('#logSpin').val() + ")").remove(); // prune long logs
+        }
+    }
+}
+
+</script>
+<div  id="logChecks">
+<div style="float:left;padding:0 5px 0 0;">Keep <input id="logSpin" value=50> entries</div>
+<div style="background-color:#39a5bc;float:left;color:#fff;height:30px;line-height:30px;padding:0 5px 0 2px;"><input type=checkbox id="highlightCheck" checked>Notes</div>
+<div style="background-color:#a1c15f;float:left;color:#fff;height:30px;line-height:30px;padding:0 5px 0 2px;"><input type=checkbox id="outputCheck" checked>Output </div>
+<div style="background-color:#a40860;float:left;color:#fff;height:30px;line-height:30px;padding:0 5px 0 2px;"><input type=checkbox id="plotCheck">Plot </div>
+<div style="background-color:#cf6666;float:left;color:#fff;height:30px;line-height:30px;padding:0 5px 0 2px;"><input type=checkbox id="errorCheck" checked>Errors </div>
+<div style="background-color:#cf6666;float:left;color:#fff;height:30px;line-height:30px;padding:0 5px 0 2px;"><input type=checkbox id="speakCheck" checked>Speak </div>
+<input type=submit id="ClearLog" name=Clear value="&nbsp;Clear&nbsp;">
+</div><br><br><br><br>
+<!--<div class="output" id="output" style="margin-top: 45px;width:100%;height: 100%;overflow:scroll;"></div>style="position:absolute;z-index: 1000;"-->
+
+
+<div class="output" id="output" style="clear:left;overflow:scroll;"></div>
+

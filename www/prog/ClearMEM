@@ -1,0 +1,13 @@
+#include <stdio.h>
+#include "DDScon.h"
+// Initialize:
+
+uint32_t a=0;
+void Clear_mem(void)
+{
+    DDScon d;
+    int count;
+    for(count=0;count<4096;count++){
+	d.Plot.SetPoint(count,0);
+	}
+}

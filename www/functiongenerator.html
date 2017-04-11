@@ -1,0 +1,98 @@
+<script type="text/javascript">
+$(function () {
+    $('.FunctionGeneratorField').spinner({
+        numberFormat: "n",
+        step: 1,
+        stop: function(){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                WebSocketSend("SET;FunctionGenerator;" + this.id + " " + this.value); 
+                return true;
+            }
+        }
+    });
+    
+    $('#Frequency').spinner({
+        min: 0,
+        max: 100000
+    });
+    
+    $('#Amplitude').spinner({
+        min: 0,
+        max: 3000
+    });
+    
+    $('#Offset').spinner({
+        min: -1500,
+        max: 4900
+    });
+
+    // sliders
+    $('.onoffswitch-checkbox').change(function(){
+        if(this.checked){
+            // Add green shadow to ON state
+            $('label[for=' + this.id + ']').css("-webkit-box-shadow", "0 0 15px #00FF00");
+        } else {
+            $('label[for=' + this.id + ']').css("-webkit-box-shadow", "none");
+        }
+    });    
+        
+    $('#FunctionGeneratorDialog').find('.onoffswitch-checkbox').click(function(){
+        if(this.checked){
+            WebSocketSend("SET;FunctionGenerator;" + this.id + " ON"); 
+        } else {
+            WebSocketSend("SET;FunctionGenerator;" + this.id + " OFF"); 
+        }
+    });
+    
+    $("#SetWaveform").on('change', function(){
+        WebSocketSend("SET;FunctionGenerator;" + "SetWaveform " + $("#SetWaveform").val()); 
+  });
+
+    
+});
+
+
+
+function FunctionGeneratorReceivedData(input){ 
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+    for (var key in data2){
+        if(data2.hasOwnProperty(key) && !($('#' + key).is(":focus"))){
+            $('#' + key).val(data2[key]);       
+        }
+    }
+    $('#Output').prop('checked', Boolean(parseInt(data2["Output"])));
+    $('#Output').trigger('change'); // Need to trigger event so shadow is added
+
+}
+</script>
+<table width=100% class="datatable">
+<tr>
+<td><label for="Frequency">Freq(Hz):</label></td><td><input id="Frequency" class="FunctionGeneratorField" value="0" style="display: inline;" title="in Hz"></td>
+<td><label for="Amplitude">Amp(mV):</label></td><td><input id="Amplitude" class="FunctionGeneratorField" value="0" style="display: inline;" title="in mV"></td>
+</tr>
+
+<tr>
+<td><label for="SetWaveform">WaveForm:</label></td>
+<td><select id="SetWaveform">
+<option value="SIN">SIN</option>
+<option value="RAMP">RAMP</option>
+<option value="DC">DC</option>
+</select>
+</td>
+<td>
+<label for="Offset">Offset(mV):</label></td><td><input id="Offset" class="FunctionGeneratorField" value="0" style="display: inline;" title="in mV">
+</td>
+</tr>
+
+<tr>
+<td><div class="onoffswitch">
+    <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox" id="Output">
+    <label class="onoffswitch-label" for="Output">
+        <span class="onoffswitch-inner"></span>
+        <span class="onoffswitch-switch"></span>
+    </label>
+</div>   
+</td>
+</tr>
+</table>        

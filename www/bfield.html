@@ -1,0 +1,55 @@
+<script type="text/javascript">
+$(function () {    
+    var Bfields=["Axial","Norm","Perp"];
+    var Bfieldcontent="<center>";
+    
+    // generate table
+    for(i=0;i<Bfields.length;i++){
+        Bfieldcontent=Bfieldcontent + '<table style="width:80%;" class="datatable"><tr><th colspan=4>' + Bfields[i] + '</th></tr><tr><td><label for="B' + Bfields[i] + 'CurrentOP">Op. Curr.:</label></td><td><input id="B' + Bfields[i] + 'CurrentOP" value="0.00" readonly type=text></td><td><label for="B' + Bfields[i] + 'VoltageOP">Op. Volt.:</label></td><td><input id="B' + Bfields[i] + 'VoltageOP" value="0.00" readonly type=text></tr>';
+        Bfieldcontent=Bfieldcontent + '<tr><td><label for="B' + Bfields[i] + 'CurrentLim">Curr. Lim.:</label></td><td><input id="B' + Bfields[i] + 'CurrentLim" class="BfieldField" value="0.00" ></td><td><label for="B' + Bfields[i] + 'VoltageLim">Volt. Lim.:</label></td><td><input id="B' + Bfields[i] + 'VoltageLim" class="BfieldField" value="0.00" ></td></tr></table>';
+        Bfieldcontent=Bfieldcontent + '<div class="onoffswitch"><input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox" id="B' + Bfields[i] + 'State"><label class="onoffswitch-label" for="B' + Bfields[i] + 'State"><span class="onoffswitch-inner"></span><span class="onoffswitch-switch"></span></label></div>';
+        if(i<Bfields.length-1){
+            Bfieldcontent=Bfieldcontent + '<hr>';
+        }
+    }
+    $('#BfieldDialog').html(Bfieldcontent + "</center>");
+
+    $('.BfieldField').spinner({
+        min: 0,
+        max: 5,
+        numberFormat: "n",
+        step: 0.01,
+        stop: function(){ // update device when spinner has stopped spinning
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                WebSocketSend("SET;AgilentBOUSB;" + this.id + " " + this.value); 
+            }
+        }
+    });
+
+    // sliders
+    $('.onoffswitch-checkbox').change(function(){
+        if(this.checked){
+            // Add green shadow to ON state
+            $('label[for=' + this.id + ']').css("-webkit-box-shadow", "0 0 15px #00FF00");
+        } else {
+            $('label[for=' + this.id + ']').css("-webkit-box-shadow", "none");
+        }
+    });       
+        
+    $('#BfieldDialog').find('.onoffswitch-checkbox').click(function(){
+        if(this.checked){
+            WebSocketSend("SET;AgilentBOUSB;" + this.id + " ON"); 
+        } else {
+            WebSocketSend("SET;AgilentBOUSB;" + this.id + " OFF"); 
+        }
+    });
+
+        
+});
+</script>
+
+
+
+
+
+

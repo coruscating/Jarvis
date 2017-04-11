@@ -1,0 +1,9 @@
+ScriptPlot["Type"]="2d";
+ScriptPlot["ioX"]="Frequency";
+ScriptPlot["ioY"]="MMPhase";
+ScriptPlot["ioY2"]="MMAmp";
+ScriptVars["Width"] = .02;
+ScriptVars["plotPoints"]=100;
+ScriptVars['CompStart']=1;
+ScriptVars['CompEnd']=3;
+ScriptVars["StepNumber"] =100;

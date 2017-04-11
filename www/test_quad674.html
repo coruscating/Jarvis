@@ -1,0 +1,195 @@
+<script type="text/javascript">
+
+voltage_spinner_options = {
+        numberFormat: "n",
+        min: -10,
+        max: 10,
+        numberFormat: "n",
+        step: 0.01,
+        page: 10,
+
+        stop: function(){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                var set=this.id.split("Voltage");
+                WebSocketSend("SET;QuAD674;rampToVoltage " + set[1] + " " + this.value); 
+                return true;
+            }
+        }
+    };
+
+$(function () {       
+
+    var i=0;
+
+    var filter_table="<table><tr><th>Filter</th><th>Type</th><th>Source</th><th>Gain</th>"
+        + "<th>Cutoff</th><th>Offset</th></tr>";
+
+    for(i=0;i<6;i++){
+        filter_table = filter_table + "<tr><td width=\"40\">" + i + "</td>"
+        filter_table = filter_table + "<td><select class=QuADFilterControl id=QuADFilterType" + i + ">"
+        filter_table = filter_table + "<option value=P>P</option>";
+        filter_table = filter_table + "<option value=I>I</option>";
+        filter_table = filter_table + "<option value=LP>LP</option>";
+        filter_table = filter_table + "<option value=HP>HP</option>";
+        filter_table = filter_table + "<option value=PI>PI</option>";
+        filter_table = filter_table + "</select></td>";
+        filter_table = filter_table + "<td><select class=QuADFilterControl id=QuADFilterSource" + i + ">"
+        filter_table = filter_table + "<option value=ADC0>ADC0</option>";
+        filter_table = filter_table + "<option value=ADC1>ADC1</option>";
+        filter_table = filter_table + "<option value=ADC2>ADC2</option>";
+        filter_table = filter_table + "<option value=ADC3>ADC3</option>";
+        filter_table = filter_table + "<option value=ADC4>ADC4</option>";
+        filter_table = filter_table + "<option value=ADC5>ADC5</option>";
+        filter_table = filter_table + "<option value=ADC6>ADC6</option>";
+        filter_table = filter_table + "<option value=ADC7>ADC7</option>";
+        filter_table = filter_table + "<option value=IIR0>IIR0</option>";
+        filter_table = filter_table + "<option value=IIR1>IIR1</option>";
+        filter_table = filter_table + "<option value=IIR2>IIR2</option>";
+        filter_table = filter_table + "<option value=IIR3>IIR3</option>";
+        filter_table = filter_table + "<option value=IIR4>IIR4</option>";
+        filter_table = filter_table + "<option value=IIR5>IIR5</option>";
+        filter_table = filter_table + "</select></td>";
+        filter_table = filter_table + "<td width=\"50\"><input id=QuADFilterGain" + i
+            + " class=QuADFilterField value=0></td>";
+        filter_table = filter_table + "<td width=\"70\"><input id=QuADFilterCutoff" + i
+            + " class=QuADFilterField value=0> </td>";
+        filter_table = filter_table + "<td width=\"190\"><input id=QuADFilterOffset" + i
+            + " class=QuADFilterField value=0></td></tr>";
+    }
+
+    filter_table=filter_table + "</table>";
+
+    var daughter_table = "<table><tr><th>Channel</th><th>Type</th><th>DAC Mode</th>"
+        + "<th>DAC Range</th><th>DAC Positive Rail</th><th>DAC Negative Rail</th>"
+        + "<th>DAC Source</th><th>Voltage</th></tr>";
+
+    for(i=0;i<8;i++){
+        daughter_table = daughter_table + "<tr><td>" + i + "</td>";
+        daughter_table = daughter_table + "<td><select class=QuADDaughterControl id=QuADDaughterType" + i + ">";
+        daughter_table = daughter_table + "<option value=ADC>ADC</option>";
+        daughter_table = daughter_table + "<option value=DAC>DAC</option>";
+        daughter_table = daughter_table + "</select></td>";
+        daughter_table = daughter_table + "<td><select class=QuADDaughterControl id=QuADDaughterOutputMode" + i + ">";
+        daughter_table = daughter_table + "<option value=Feedback>Feedback</option>";
+        daughter_table = daughter_table + "<option value=Single>Single</option>";
+        daughter_table = daughter_table + "</select></td>";
+        daughter_table = daughter_table + "<td><select class=QuADDaughterControl id=QuADDaughterRangeMode" + i + ">";
+        daughter_table = daughter_table + "<option value=Positive>Positive</option>";
+        daughter_table = daughter_table + "<option value=Dual>Dual</option>";
+        daughter_table = daughter_table + "</select></td>";
+        daughter_table = daughter_table + "<td><input id='QuADDaughterPositiveRail" + i
+            + "' class='QuADDaughterControl textinput' value=0></td>";
+        daughter_table = daughter_table + "<td><input id='QuADDaughterNegativeRail" + i
+            + "' class='QuADDaughterControl textinput' value=0></td>";
+        daughter_table = daughter_table + "<td><select class=QuADDaughterControl id=QuADDaughterSource" + i + ">"
+        daughter_table = daughter_table + "<option value=ADC0>ADC0</option>";
+        daughter_table = daughter_table + "<option value=ADC1>ADC1</option>";
+        daughter_table = daughter_table + "<option value=ADC2>ADC2</option>";
+        daughter_table = daughter_table + "<option value=ADC3>ADC3</option>";
+        daughter_table = daughter_table + "<option value=ADC4>ADC4</option>";
+        daughter_table = daughter_table + "<option value=ADC5>ADC5</option>";
+        daughter_table = daughter_table + "<option value=ADC6>ADC6</option>";
+        daughter_table = daughter_table + "<option value=ADC7>ADC7</option>";
+        daughter_table = daughter_table + "<option value=IIR0>IIR0</option>";
+        daughter_table = daughter_table + "<option value=IIR1>IIR1</option>";
+        daughter_table = daughter_table + "<option value=IIR2>IIR2</option>";
+        daughter_table = daughter_table + "<option value=IIR3>IIR3</option>";
+        daughter_table = daughter_table + "<option value=IIR4>IIR4</option>";
+        daughter_table = daughter_table + "<option value=IIR5>IIR5</option>";
+        daughter_table = daughter_table + "</select></td>";
+        daughter_table = daughter_table + "<td><input id='QuADDaughterVoltage" + i
+            + "' class=QuADVoltageField value=0 readonly=true></td>";
+    }
+    
+    daughter_table = daughter_table + "</table>";
+    
+    var html_body = "<h3>Daughter controls</h3><br>" + daughter_table
+        + "<br><h3>Filter controls</h3><br>" + filter_table;
+    
+    $('#quadtable').html(html_body);
+    
+    // Update changes from type and source of filter
+    $('.QuADFilterControl').change(function() {
+          var set=$(this).attr("id").slice(-1);
+          WebSocketSend("SET;QuAD674;configureFilter " + set + " " + $('#QuADFilterType' + set).val()
+                + " " + $('#QuADFilterSource' + set).val() + " " + $('#QuADFilterCutoff' + set).val()
+                + " " + $('#QuADFilterGain' + set).val() + " " + $('#QuADFilterOffset' + set).val()); 
+    });
+
+    // Update filter settings for gain, cutoff, and offset
+    $('.QuADFilterField').spinner({
+        numberFormat: "n",
+        step: 1,
+        stop: function(){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                var set=this.id.slice(-1);
+                WebSocketSend("SET;QuAD674;configureFilter " + set + " " + $('#QuADFilterType' + set).val()
+                    + " " + $('#QuADFilterSource' + set).val() + " " + $('#QuADFilterCutoff' + set).val()
+                    + " " + $('#QuADFilterGain' + set).val() + " " + $('#QuADFilterOffset' + set).val()); 
+                return true;
+            }
+        }
+    });
+
+    // Update settings for the type of daughter; also change the GUI to reflect the new status
+    $('.QuADDaughterControl').change(function() {
+        var set=$(this).attr("id").slice(-1);
+        WebSocketSend("SET;QuAD674;configureDaughter " + set + " " + $('#QuADDaughterType' + set).val()
+            + " " + $('#QuADDaughterSource' + set).val() + " " + $('#QuADDaughterOutputMode' + set).val()
+            + " " + $('#QuADDaughterRangeMode' + set).val() + " " + $('#QuADDaughterPositiveRail' + set).val()
+            + " " + $('#QuADDaughterNegativeRail' + set).val()); 
+    });
+});
+
+function QuADReceivedData(input){ 
+    var i=0;
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+    for (var key in data2){ 
+        var voltages=data2[key];
+        for (i=0;i<data2[key].length;i++){
+            if(!($('#' + key + i).is(":focus"))){
+                $('#' + key + i).val(voltages[i]);
+            }
+        }
+    }
+    //Update the GUI to reflect daughter statuses
+    for (i=0;i<8;i++){
+        if ($('#QuADDaughterType' + i).val()=="DAC") {
+            $('#QuADDaughterOutputMode' + i).attr("disabled", false);
+            $('#QuADDaughterRangeMode' + i).attr("disabled", false);
+            $('#QuADDaughterPositiveRail' + i).attr("disabled", false);
+            $('#QuADDaughterNegativeRail' + i).attr("disabled", false);
+            if ($('#QuADDaughterOutputMode' + i).val()=="Feedback") {
+                $('#QuADDaughterSource' + i).attr("disabled", false);
+                if ($('#QuADDaughterVoltage' + i).data('spinner')) {
+                    $('#QuADDaughterVoltage' + i).spinner("destroy");
+                }
+                $('#QuADDaughterVoltage' + i).attr("readonly", true);
+                $('#QuADDaughterVoltage' + i).addClass("textinput");
+            } else {
+                $('#QuADDaughterSource' + i).attr("disabled", true);
+                $('#QuADDaughterVoltage' + i).attr("readonly", false);
+                $('#QuADDaughterVoltage' + i).removeClass("textinput");
+                if (!$('#QuADDaughterVoltage' + i).data('spinner')) {
+                    $('#QuADDaughterVoltage' + i).spinner(voltage_spinner_options);
+                }
+            }
+        } else {
+            $('#QuADDaughterOutputMode' + i).attr("disabled", true);
+            $('#QuADDaughterRangeMode' + i).attr("disabled", true);
+            $('#QuADDaughterSource' + i).attr("disabled", true);
+            $('#QuADDaughterPositiveRail' + i).attr("disabled", true);
+            $('#QuADDaughterNegativeRail' + i).attr("disabled", true);
+            if ($('#QuADDaughterVoltage' + i).data('spinner')) {
+                $('#QuADDaughterVoltage' + i).spinner("destroy");
+            }
+            $('#QuADDaughterVoltage' + i).attr("readonly", true);
+            $('#QuADDaughterVoltage' + i).addClass("textinput");
+        }
+    }
+}
+</script>
+<div id=quadtable>
+</div>
+</center>           

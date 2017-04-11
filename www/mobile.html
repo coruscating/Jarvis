@@ -1,0 +1,90 @@
+<head>
+<script src="retro/js/jquery-1.8.2.js"></script>
+<link href="retro/css/retro/jquery-ui-1.9.0.custom.css" rel="stylesheet">  
+<link href="custom.css" rel="stylesheet">
+<script type="text/javascript">
+var icon={};
+icon["error"]="alert";
+icon["highlight"]="info";
+icon["output"]="play";
+icon["plot"]="signal";
+icon["speak"]="signal";
+
+var ERROR = 'error';
+var NOTE = 'highlight';
+var OUTPUT = 'output';
+var PLOT = 'plot';
+var SPEAK = 'speak';
+
+$(function () {
+	WebSocketStart();
+});
+
+function Timestamp(){
+    var currentTime = new Date ( );
+    var currentHours = currentTime.getHours ( );
+    var currentMinutes = currentTime.getMinutes ( );
+    var currentSeconds = currentTime.getSeconds ( );
+
+    // Pad the minutes and seconds with leading zeros, if required
+    currentMinutes = ( currentMinutes < 10 ? "0" : "" ) + currentMinutes;
+    currentSeconds = ( currentSeconds < 10 ? "0" : "" ) + currentSeconds;
+
+    // Choose either "AM" or "PM" as appropriate
+    var timeOfDay = ( currentHours < 12 ) ? "AM" : "PM";
+
+    // Convert the hours component to 12-hour format if needed
+    currentHours = ( currentHours > 12 ) ? currentHours - 12 : currentHours;
+
+    // Convert an hours component of "0" to "12"
+    currentHours = ( currentHours == 0 ) ? 12 : currentHours;
+
+    // Compose the string for display
+    var currentTimeString = currentHours + ":" + currentMinutes + ":" + currentSeconds + " " + timeOfDay;
+    return currentTimeString;
+}
+
+function WebSocketStart()
+{
+     ws = new WebSocket("ws://18.62.18.231:9999");
+     log("highlight","Connected to server");
+	ws.onopen = function()
+     {
+        ws.send("SPEAKLOG");
+     };
+
+     ws.onmessage = function (evt)
+     {
+     	if(evt.data.length > 8){
+            var string = evt.data.split(";");
+        }
+        if(string[0] == "SPEAKLOG"){
+
+			devarray=eval(string[1]);
+            for (var i = 0; i < devarray.length; i++) {
+                log(NOTE, devarray[i]);
+            }
+
+        } else if(string[0]=="SPEAK"){
+        	log("highlight",Timestamp() + " " + evt.data);
+        }
+    }
+}
+
+
+
+
+function log(type, message){
+    // fancy schmancy code to add entry to top of log with animation
+    var wrapping='<div class="ui-state-' + type + ' ui-corner-all outputentry" style="margin-top: 10px; padding: 0em .1em;  vertical-align:top;zoom: 200%"><p style="vertical-align:top; padding: 0px;"><span class="ui-icon ui-icon-' + icon[type] + '" style="float: left; margin-right: .3em;vertical-align:top;"></span>';
+    // save the place we were scrolled to
+    $(wrapping + arguments.callee.caller.name + ': ' + message + "</p></div>").hide().prependTo($("#output")).slideDown('fast');
+}
+
+</script>
+</head>
+<body>
+<div class="output" id="output" style="clear:left;overflow:scroll;"></div>
+
+
+</body>

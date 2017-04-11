@@ -1,0 +1,34 @@
+#!/bin/sh
+
+while read line
+do
+
+    device=`echo $line | awk -F\" '{ print $2; }'`
+    if [ "a"$device = "a" ] ; then
+        continue
+    fi
+    temp=`echo $line | awk -F\" '{ print $4; }'`
+    host=`echo $temp | awk -F: '{ print $1 ; }'`
+    port=`echo $temp | awk -F: '{ print $2 ; }'`
+    echo device=$device
+    echo host = $host
+    echo port = $port
+    if [ $host = `hostname` ] ; then # local
+        pgrep -f "MTserver $device"
+        if [ $? -eq 1 ] ; then
+            echo "            roxterm --tab -n $device -d /Dropbox/Quanta/Software/GitHub/DeviceWorkers -e MTserver $device -p $port"
+
+            roxterm --tab -n $device -d /Dropbox/Quanta/Software/GitHub/DeviceWorkers -e MTserver $device -p $port
+            echo "starting $device"
+        else
+            echo "$device already started"
+        fi
+    else # remote, ssh login
+        echo "remote"
+        #ssh $host '
+        #    pgrep -f "MTserver $device"
+        #    if [ $? -eq 1 ] ; then
+        #    roxterm --tab -n $device -d /shared/software/devel/DeviceWorkers -e MTserver $device -p $port
+        #'
+    fi
+done < devices_dict_test

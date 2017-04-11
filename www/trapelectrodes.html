@@ -1,0 +1,97 @@
+<script type="text/javascript">
+$(function () {
+    var electrodemap=new Array(73);
+    electrodemap=[0,2,2,2,2,2,2,2,2,2,2,
+                    2,2,2,2,2,2,2,2,1,1,
+                    1,1,1,1,1,1,1,1,1,1,
+                    1,1,1,1,1,1,2,2,2,2,
+                    2,1,2,2,2,2,2,2,2,2,
+                    2,2,2,2,1,1,1,1,1,1,
+                    1,1,1,1,1,1,1,1,1,1,
+                    1,1];
+
+    
+
+    var htmltable='<div style="position:absolute;z-index:1;background-color: #f6f4ec;width:218px;padding: 10px 0px 0px 0px;">Zone <input id=Zone class=TrapElectrodesSet value=0><br>';
+    htmltable=htmltable + 'Zone ends <input id=ZoneEnds class=TrapElectrodesSet value=0><br>';
+    htmltable=htmltable + 'Zone mids <input id=ZoneMids class=TrapElectrodesSet value=0><br>';
+    htmltable=htmltable + 'Zone sides <input id=ZoneSide class=TrapElectrodesSet value=0><br>';
+    htmltable=htmltable + 'Zone Horiz. Comp. <input id=ZoneCompensateHorizontal class=TrapElectrodesSet value=0><br>';
+    htmltable=htmltable + 'Zone Vert. Comp. <input id=ZoneCompensateVertical class=TrapElectrodesSet value=0><br>';
+    htmltable=htmltable + 'Horiz. Comp. <input id=GLOBALCOMPENSATEHORIZONTAL class=TrapElectrodesSet value=0><br>';
+    htmltable=htmltable + 'Vert. Comp. <input id=GLOBALCOMPENSATEVERTICAL class=TrapElectrodesSet value=0><br>';
+    htmltable=htmltable + '<table><tr><td>Mids <br><input id=GLOBALSETMIDS class=TrapElectrodesSet value=0></td>';
+    htmltable=htmltable + '<td>Sides<br><input id=GLOBALSETSIDE class=TrapElectrodesSet value=0></td></tr>';
+    htmltable=htmltable + '<tr><td>Ends <br><input id=GLOBALSETENDS class=TrapElectrodesSet value=0></td>';
+    htmltable=htmltable + '<td>Gnd. <br><input id=GND class=TrapElectrodesSet value=0></td></tr></table>';
+    htmltable=htmltable + '<br></div></div><div style="position:relative; top:300px;"><div style="background-color: #8ea;"><strong>Board 1</strong></div><div style="background-color: #f66;"><strong>Board 2</strong></div><br><table class="datatable">';
+    
+    for(var i=1; i<=36; i++){
+        htmltable = htmltable + '<tr><td style="border: 1px solid black;"><input id="Q' + i + '" class="TrapElectrodesField oneplace board' + electrodemap[i] + '" value="0"> ' + ("0" + i).slice(-2) + '</td><td> </td><td style="border:1px solid black;">' + (i+36).toString() + ' <input id="Q' + (i+36) + '" class="TrapElectrodesField oneplace board' + electrodemap[i+36] + '" value="0"></td></tr>';
+    }
+    $('#electrodetable').html(htmltable + '</table></div>');
+    
+    $('#Zone').spinner({
+        numberFormat: "n",
+        min: 2,
+        max: 35,
+        step: 1
+    });
+
+
+    $('.TrapElectrodesSet').spinner({
+        numberFormat: "n",
+        min: -10,
+        max: 10,
+        step: 0.01,
+        stop: function(event){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                WebSocketSend("SET;TrapElectrodes;" + this.id + " " + this.value); 
+                return true;
+            }
+        }
+    });
+
+    
+    $('.TrapElectrodesField').spinner({
+        numberFormat: "n",
+        min: -10,
+        max: 10,
+        step: 0.01,
+        stop: function(event){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                WebSocketSend("SET;TrapElectrodes;SETVOLTAGE " + this.id + " " + this.value); 
+                return true;
+            }
+        }
+    });
+ 
+    $('.oneplace').spinner().change(function(){
+        $(this).val($(this).val().toFixed(2));
+    });
+ 
+    
+});
+
+
+function TrapElectrodesReceivedData(input){ 
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+    for (var key in data2){
+        if(data2.hasOwnProperty(key) && !($('#' + key).is(":focus"))){
+            $('#' + key).val(data2[key]);    
+            if (key=='Q73'){
+                $('#GND').val(data2[key]);
+            }   
+        }
+    }
+
+
+}
+</script>
+<div id="electrodetable">
+
+</div>
+
+</table>
+           

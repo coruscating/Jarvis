@@ -1,0 +1,216 @@
+<script src="cropper/js/jquery.Jcrop.min.js"></script>
+<link rel="stylesheet" href="cropper/css/jquery.Jcrop.css" type="text/css" />
+
+<script type="text/javascript">
+
+var ctxImage = document.getElementById("imageCanvas").getContext("2d");
+var ctxSelections = document.getElementById("selectionCanvas").getContext("2d");
+var selection
+var cropButton = document.getElementById("cropButton");
+var cropResetButton = document.getElementById("cropResetButton");
+var interestButton = document.getElementById("interestButton");
+var interestResetButton = document.getElementById("interestReset");
+var binSelector = document.getElementById("bin");
+var cooler = document.getElementById("cooler");
+
+var interestEnable = false;
+var cropEnable = false;
+
+$(function () {
+  $("#bin").change(function() {
+    console.log(this.value);
+    WebSocketSend("SET;Camera;setBin " + this.value);
+  });
+
+  $('.CameraField').spinner({
+    numberFormat: "n",
+    stop: function(){ // update device when spinner has stopped spinning
+      if (window.goodKeystrokes.indexOf(event.which) != -1){
+        WebSocketSend("SET;Camera;" + this.id + " " + this.value);
+        return true;
+      }
+    }
+  });
+
+  $('#preAmpGain').spinner({
+    min: 0,
+    max: 1000,
+    step:1
+  });
+
+  $('#EMCCDGain').spinner({
+    min: 0,
+    max: 1000,
+    step: 1
+  });
+
+  $('#targetTemp').spinner({
+    min: -100,
+    max: 20,
+    step: 1
+  });
+
+  $('#ExposureTime').spinner({
+    min: 0,
+    max: 4000,
+    step: 50
+  });
+  
+  $('#camCropper').Jcrop({
+    onSelect: SetCoords,
+  }, function(){
+    selection = this;
+    selection.disable();
+  });
+  
+
+
+  
+});
+
+// starting refresh rate
+window.setTimeout(imageUpdate,200);
+
+
+var image = null;
+function imageUpdate() {
+    if(window.cameraon==true){ // only load image when dialog is open
+      image = new Image();
+      image.onload = onImageLoad;
+      image.src = "images/camera/render.bmp?lastmod=" + new Date().getTime();
+    }
+    window.setTimeout(imageUpdate, $('#exposure').val());
+}
+
+onImageLoad = function() {
+    ctxImage.drawImage(image,0,0,512,512);
+};
+
+var image = new Image();
+image.src = "images/camera/render.bmp";
+
+function CameraReceivedData(input){
+  var string = input.split(";");
+  var data2=JSON.parse(string[3]);
+  for (var key in data2){
+    if(data2.hasOwnProperty(key) && !($('#' + key).is(":focus"))){
+        $('#' + key).val(data2[key]);
+      }
+      if (key == 'coolerStatus'){
+        if (data2[key] == 0){
+            cooler.checked = false;
+        } else {
+            cooler.checked = true;
+        }
+      }
+    
+  }
+}
+
+function setCooler(checkbox) {
+    if (checkbox.checked) {
+        WebSocketSend("SET;Camera;setCooler 1");
+    }
+    else {
+        WebSocketSend("SET;Camera;setCooler 0");
+    }   
+}
+
+function SetCoords(c) {
+    if (interestEnable) {
+        ctxSelections.rect(c.x,c.y,c.w,c.h);
+        ctxSelections.lineWidth="2";
+        ctxSelections.stroke();
+        WebSocketSend("SET;Camera;addSelection " + c.x + " " + c.y + " " + c.w + " " + c.h);
+    } else if (cropEnable) {
+        imageX = Math.max(c.x, 1)
+        imageY = Math.max(c.y, 1)
+        imageX2 = Math.min(c.x2, 512)
+        imageY2 = Math.min(c.y2, 512)
+        WebSocketSend("SET;Camera;setCrop " + imageX + " " + imageY + " " + imageX2 + " " + imageY2);
+        cropEnable = false;
+        cropButton.disabled = true;
+        cropButton.style.backgroundColor = "";
+        interestButton.disabled = false;
+        interestResetButton.disabled = false;
+        selection.disable();
+    }
+    selection.release();
+}
+
+function CropEnable() {
+    selection.enable();
+    cropButton.style.backgroundColor = "rgb(114, 214, 170)";
+    interestButton.disabled = true;
+    interestResetButton.disabled = true;
+    cropEnable = true;
+}
+
+function ResetImage() {
+    WebSocketSend("SET;Camera;setCrop 1 1 512 512");
+    cropButton.disabled=false;
+    cropEnable = false
+}
+
+function EnableInterest() {
+    selection.enable();
+    cropButton.disabled=true;
+    cropResetButton.disabled=true;
+    interestButton.style.backgroundColor = "rgb(114, 214, 170)";
+    interestEnable = true;
+    binSelector.disabled=true;
+}
+
+function ResetInterest() {
+    cropButton.disabled=false;
+    cropResetButton.disabled=false;
+    interestButton.style.backgroundColor = "";
+    interestEnable = false;
+    ctxSelections.clearRect(0, 0, 512, 512);
+    ctxSelections.beginPath();
+    WebSocketSend("SET;Camera;resetSelection");
+    binSelector.disabled=false;
+    selection.disable();
+}
+
+</script>
+<center>
+<div id="camCropper" style="height:512px; width:512px;">
+    <canvas id="selectionCanvas" width="512" height="512" style="position:absolute; left:0; top:0; z-index:1;"></canvas>
+    <canvas id="imageCanvas" width="512" height="512" style="position:absolute; left:0; top:0; z-index:0;"></canvas>
+</div>
+</center>
+<br>
+<button id="cropButton" onclick="CropEnable(this)">Set Crop</button>
+<button id="cropResetButton" onclick="ResetImage()">Reset Crop</button>
+Bin Level: 
+<select id="bin">
+    <option value="1" selected="selected">1</option>
+    <option value="2">2</option>
+    <option value="4">4</option>
+    </select>
+
+<button id="interestReset" onclick="ResetInterest()" style="float: right">Reset Interest</button>
+<button id="interestButton" onclick="EnableInterest()" style="float: right;">Select Interest</button>
+<br>
+
+<table width=100% class="datatable">
+<tr>
+<td><label for="counts">Counts: </label><input id="counts" value="0" type=text></td>
+<td><label for="maxCounts">Max Counts: </label><input id="maxCounts" value="0" type=text></td>
+</tr>
+
+<tr><td>
+<label for="preAmpGain">Pre Amp Gain: </label> <input class="CameraField" id="preAmpGain" value="0"></td>
+<td><label for="EMCCDGain">EMCCD Gain: </label> <input class="CameraField" id="EMCCDGain" value="0" size=20></td><td>
+<label for="exposure">Exposure (ms): </label> <input class="CameraField" id="exposure" value="200" size=20></td>
+</td></tr>
+
+<tr><td>
+<label for="targetTemp">Target Temp: </label> <input class="CameraField" id="targetTemp" value="25" size=20></td>
+<td><label for="currentTemp">Current Temp: </label><input id="currentTemp" value="0" type=text></td>
+<td><label for="cooler">Cooler On: </label><input id="cooler" type="checkbox" name="cooler" value="cooler" onclick="setCooler(this)" /></td></tr>
+</table>
+<br>
+
+</select>

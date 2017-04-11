@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# 2014-12-12 14:24:16.243760, 2014-12-12 14:24:25.392982, 10895, 790, 1, 355.481233, 274.589570
+
+while read line
+do
+goodtrials=`echo $line | awk -F", " '{ print $5 ; }'`
+if [ $goodtrials -ne 10 ] ; then
+goodtrials=`expr $goodtrials - 1`
+fi
+#echo $goodtrials
+
+test=`echo $line | awk -v var="$goodtrials" -F", " '{ print $1","$2","$3","$4","var","$6","$7 ; }'`
+echo $test
+
+done < ion_lifetime.log.2

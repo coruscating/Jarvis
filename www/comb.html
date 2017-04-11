@@ -1,0 +1,83 @@
+<script type="text/javascript">
+$(function () {
+    $('.CombField').spinner({
+        numberFormat: "n",
+        step: 0.01,
+        stop: function(){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                WebSocketSend("SET;Comb;" + this.id + " " + this.value); 
+                return true;
+            }
+        }
+    });
+    
+    $('.CombSqueezers').slider({
+        min: 0,
+        step: 0.001,
+        max: 80.0,
+        stop: function(){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                WebSocketSend("SET;Comb;" + this.id + " " + this.value); 
+                return true;
+            }
+        }
+    });
+
+  $(function() {
+    $( ".combsqueezer" ).slider({
+      orientation: "vertical",
+      range: "min",
+      min: 0,
+      max: 80,
+      step: 0.01,
+      value: 0,
+      slide: function( event, ui ) {
+        $( "#" + this.id + "Val" ).html( ui.value );
+      },
+      change: function( event, ui ) {
+        $( "#" + this.id + "Val" ).html( ui.value );
+      },
+      stop: function(event, ui){
+        WebSocketSend("SET;Comb;" + this.id + " " + ui.value);
+      }
+    });
+
+  });
+    
+    
+});
+
+// this is for both 844 and 1092 lasers and ADCs
+function CombReceivedData(input){ 
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+    for (var key in data2){
+        if(data2.hasOwnProperty(key) && !($('#' + key).is(":focus"))){
+            //$('#' + key).val(data2[key]);
+            $('#' + key).slider("option", "value", data2[key]);
+        }
+    }
+
+
+}
+</script>
+
+
+
+<table class=combtable><tr><th colspan=3>Pcontrol Sliders</th><th colspan=3>Stage Sliders</th></tr><tr><td>1</td><td>2</td><td>3</td><td>X</td><td>Y</td><td>Z</td></tr><tr>
+<td><div class=combsqueezer id=Beat1SqueezerX></div></td>
+<td><div class=combsqueezer id=Beat1SqueezerY></div></td>
+<td><div class=combsqueezer id=Beat1SqueezerZ></div></td>
+<td><div class=combsqueezer id=Beat1StageX></div></td>
+<td><div class=combsqueezer id=Beat1StageY></div></td>
+<td><div class=combsqueezer id=Beat1StageZ></div></td>
+</tr><tr>
+<td><div id=Beat1SqueezerXVal>0.00</div></td>
+<td><div id=Beat1SqueezerYVal>0.00</div></td>
+<td><div id=Beat1SqueezerZVal>0.00</div></td>
+<td><div id=Beat1StageXVal>0.00</div></td>
+<td><div id=Beat1StageYVal>0.00</div></td>
+<td><div id=Beat1StageZVal>0.00</div></td>
+</tr>
+
+</table>

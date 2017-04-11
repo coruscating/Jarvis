@@ -1,0 +1,375 @@
+<script type="text/javascript">
+
+var plot;
+
+var maxvoltage = 10;
+
+var voltage_spinner_options = {
+        numberFormat: "n",
+        min: -10,
+        max: 10,
+        numberFormat: "n",
+        step: 0.01,
+        page: 10,
+
+        stop: function(){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                var set=this.id.split("Voltage");
+                WebSocketSend("SET;QuAD674;rampToVoltage " + set[1] + " " + this.value); 
+                return true;
+            }
+        }
+    };
+
+$(function () {       
+
+    var i=0;
+
+    var filter_table="<table><tr><th>Filter</th><th>Type</th><th>Source</th><th>Gain</th>"
+        + "<th>Cutoff</th><th>Offset</th></tr>";
+
+    for(i=0;i<6;i++){
+        filter_table += "<tr><td width=\"40\">" + i + "</td>"
+        filter_table += "<td><select class=QuAD674FilterControl id=QuAD674FilterType" + i + ">"
+        filter_table += "<option value=P>P</option>";
+        filter_table += "<option value=I>I</option>";
+        filter_table += "<option value=LP>LP</option>";
+        filter_table += "<option value=HP>HP</option>";
+        filter_table += "<option value=PI>PI</option>";
+        filter_table += "</select></td>";
+        filter_table += "<td><select class=QuAD674FilterControl id=QuAD674FilterSource" + i + ">"
+        filter_table += "<option value=ADC0>ADC0</option>";
+        filter_table += "<option value=ADC1>ADC1</option>";
+        filter_table += "<option value=ADC2>ADC2</option>";
+        filter_table += "<option value=ADC3>ADC3</option>";
+        filter_table += "<option value=ADC4>ADC4</option>";
+        filter_table += "<option value=ADC5>ADC5</option>";
+        filter_table += "<option value=ADC6>ADC6</option>";
+        filter_table += "<option value=ADC7>ADC7</option>";
+        filter_table += "<option value=IIR0>IIR0</option>";
+        filter_table += "<option value=IIR1>IIR1</option>";
+        filter_table += "<option value=IIR2>IIR2</option>";
+        filter_table += "<option value=IIR3>IIR3</option>";
+        filter_table += "<option value=IIR4>IIR4</option>";
+        filter_table += "<option value=IIR5>IIR5</option>";
+        filter_table += "</select></td>";
+        filter_table += "<td width=\"50\"><input id=QuAD674FilterGain" + i
+            + " class=QuAD674FilterField value=0></td>";
+        filter_table += "<td width=\"70\"><input id=QuAD674FilterCutoff" + i
+            + " class=QuAD674FilterField value=0> </td>";
+        filter_table += "<td width=\"190\"><input id=QuAD674FilterOffset" + i
+            + " class=QuAD674FilterField value=0></td></tr>";
+    }
+
+    filter_table=filter_table + "</table>";
+
+    var daughter_table = "<table><tr><th>Channel</th><th>Type</th><th>DAC Mode</th>"
+        + "<th>DAC Range</th><th>DAC Positive Rail</th><th>DAC Negative Rail</th>"
+        + "<th>DAC Source</th><th>Voltage</th></tr>";
+
+    for(i=0;i<8;i++){
+        daughter_table += "<tr><td>" + i + "</td>";
+        daughter_table += "<td><select class=QuAD674DaughterControl id=QuAD674DaughterType" + i + ">";
+        daughter_table += "<option value=ADC>ADC</option>";
+        daughter_table += "<option value=DAC>DAC</option>";
+        daughter_table += "</select></td>";
+        daughter_table += "<td><select class=QuAD674DaughterControl id=QuAD674DaughterOutputMode" + i + ">";
+        daughter_table += "<option value=Feedback>Feedback</option>";
+        daughter_table += "<option value=Single>Single</option>";
+		daughter_table += "<option value=Ramp>Ramp</option>";
+        daughter_table += "</select></td>";
+        daughter_table += "<td><select class=QuAD674DaughterControl id=QuAD674DaughterRangeMode" + i + ">";
+        daughter_table += "<option value=Positive>Positive</option>";
+        daughter_table += "<option value=Dual>Dual</option>";
+        daughter_table += "</select></td>";
+        daughter_table += "<td><input id='QuAD674DaughterPositiveRail" + i
+            + "' class='QuAD674DaughterControl textinput' value=0></td>";
+        daughter_table += "<td><input id='QuAD674DaughterNegativeRail" + i
+            + "' class='QuAD674DaughterControl textinput' value=0></td>";
+        daughter_table += "<td><select class=QuAD674DaughterControl id=QuAD674DaughterSource" + i + ">"
+        daughter_table += "<option value=ADC0>ADC0</option>";
+        daughter_table += "<option value=ADC1>ADC1</option>";
+        daughter_table += "<option value=ADC2>ADC2</option>";
+        daughter_table += "<option value=ADC3>ADC3</option>";
+        daughter_table += "<option value=ADC4>ADC4</option>";
+        daughter_table += "<option value=ADC5>ADC5</option>";
+        daughter_table += "<option value=ADC6>ADC6</option>";
+        daughter_table += "<option value=ADC7>ADC7</option>";
+        daughter_table += "<option value=IIR0>IIR0</option>";
+        daughter_table += "<option value=IIR1>IIR1</option>";
+        daughter_table += "<option value=IIR2>IIR2</option>";
+        daughter_table += "<option value=IIR3>IIR3</option>";
+        daughter_table += "<option value=IIR4>IIR4</option>";
+        daughter_table += "<option value=IIR5>IIR5</option>";
+        daughter_table += "</select></td>";
+        daughter_table += "<td><input id='QuAD674DaughterVoltage" + i
+            + "' class=QuAD674VoltageField value=0 readonly=true></td>";
+    }
+    
+    daughter_table += "</table>";
+	
+	var ramp_table = "<table><tr><th>Target</th><th>Divider</th><th>On/Off</th></tr>";
+	ramp_table += "<tr><td><select class=QuAD674RampControl id=QuAD674RampTarget>"
+    ramp_table += "<option value=DAC0>DAC0</option>";
+    ramp_table += "<option value=DAC1>DAC1</option>";
+    ramp_table += "<option value=DAC2>DAC2</option>";
+    ramp_table += "<option value=DAC3>DAC3</option>";
+    ramp_table += "<option value=DAC4>DAC4</option>";
+    ramp_table += "<option value=DAC5>DAC5</option>";
+    ramp_table += "<option value=DAC6>DAC6</option>";
+    ramp_table += "<option value=DAC7>DAC7</option>";
+	ramp_table += "</select></td>";
+	ramp_table += "<td><input id='QuAD674RampDivider" + i
+            + "' class=QuAD674RampField value=0 readonly=true></td>";
+	ramp_table += "<td><select class=QuAD674RampControl id=QuAD674RampTarget>"
+	ramp_table += "<option value=On>On</option>";
+    ramp_table += "<option value=Off>Off</option>";
+	ramp_table += "</select></td></tr>";
+	ramp_table += "</table>";
+
+    //QuADPlotOscilloscope([[0,0],[1,1]])
+    
+    var html_body = "<h3>Daughter controls</h3><br>" + daughter_table
+		+ "<br><h3>Ramp controls</h3><br>" + ramp_table
+        + "<br><h3>Filter controls</h3><br>" + filter_table
+		+ "<br><h3>Testing testing</h3><br>";
+    
+    $('#quad674table').html(html_body);
+    
+    // Update changes from type and source of filter
+    $('.QuAD674FilterControl').change(function() {
+          var set=$(this).attr("id").slice(-1);
+          WebSocketSend("SET;QuAD674;configureFilter " + set + " " + $('#QuAD674FilterType' + set).val()
+                + " " + $('#QuAD674FilterSource' + set).val() + " " + $('#QuAD674FilterCutoff' + set).val()
+                + " " + $('#QuAD674FilterGain' + set).val() + " " + $('#QuAD674FilterOffset' + set).val()); 
+    });
+
+    // Update filter settings for gain, cutoff, and offset
+    $('.QuAD674FilterField').spinner({
+        numberFormat: "n",
+        step: 0.001,
+        stop: function(){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                var set=this.id.slice(-1);
+                WebSocketSend("SET;QuAD674;configureFilter " + set + " " + $('#QuAD674FilterType' + set).val()
+                    + " " + $('#QuAD674FilterSource' + set).val() + " " + $('#QuAD674FilterCutoff' + set).val()
+                    + " " + $('#QuAD674FilterGain' + set).val() + " " + $('#QuAD674FilterOffset' + set).val()); 
+                return true;
+            }
+        }
+    });
+
+    // Update settings for the type of daughter; also change the GUI to reflect the new status
+    $('.QuAD674DaughterControl').change(function() {
+        var set=$(this).attr("id").slice(-1);
+        WebSocketSend("SET;QuAD674;configureDaughter " + set + " " + $('#QuAD674DaughterType' + set).val()
+            + " " + $('#QuAD674DaughterSource' + set).val() + " " + $('#QuAD674DaughterOutputMode' + set).val()
+            + " " + $('#QuAD674DaughterRangeMode' + set).val() + " " + $('#QuAD674DaughterPositiveRail' + set).val()
+            + " " + $('#QuAD674DaughterNegativeRail' + set).val()); 
+    });
+
+    /*$('.QuAD674ScopeControl').change(function() {
+        var set = $(this).attr("id").slice(-1);
+        var axes=plot.getAxes(), xaxis=axes.xaxis.options,yaxis=axes.yaxis.options;
+        //xaxis.min=ranges.xaxis.from;
+        //xaxis.max=ranges.xaxis.to;
+        //yaxis.min=ranges.yaxis.from;
+        yaxis.max=$('#maxvoltage').val();
+        //plot.setupGrid();
+        //plot.draw();
+    });*/
+});
+
+function QuAD674ReceivedData(input){ 
+    var i=0;
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+
+    //What follows is the new code to concatenate multiple messages that have been split
+    if (typeof data2 == 'number') {
+        if (typeof window.QuAD674ReadoutQueue == 'undefined') {
+            window.QuAD674ReadoutQueue = [];
+            window.QuAD674ReadoutQueue["id"] = string[1];
+            window.QuAD674ReadoutQueue["num"] = parseInt(string[4]);
+            window.QuAD674ReadoutQueue[parseInt(string[3])] = string[5];
+            return(0);
+        }
+        else if (string[1] == window.QuAD674ReadoutQueue["id"]) {
+            window.QuAD674ReadoutQueue[parseInt(string[3])] = string[5];
+            completeflag = true;
+            for (i=0; i<window.QuAD674ReadoutQueue["num"]; i++) {
+                if (typeof window.QuAD674ReadoutQueue[i] == 'undefined') {
+                    completeflag = false;
+                    break;
+                }
+            }
+            if (completeflag == true) {
+                data2 = "";
+                for (i=0; i<window.QuAD674ReadoutQueue["num"]; i++) {
+                    data2 += window.QuAD674ReadoutQueue[i];
+                }
+                data2 = JSON.parse(data2);
+                delete window.QuAD674ReadoutQueue;
+            } else {
+                return(0);
+            }
+        } else {
+            delete window.QuAD674ReadoutQueue;
+            window.QuAD674ReadoutQueue = [];
+            window.QuAD674ReadoutQueue["id"] = string[1];
+            window.QuAD674ReadoutQueue["num"] = parseInt(string[4]);
+            window.QuAD674ReadoutQueue[parseInt(string[3])] = string[5];
+        }
+    }
+
+    for (var key in data2){ 
+        var voltages=data2[key];
+        //Here is where to add the code for sending data frames to the oscilloscope
+        if (key=='SCOPEDATA') {
+            //QuADPlotOscilloscope(data2['SCOPEDATA']);
+        }
+        else {
+            for (i=0;i<data2[key].length;i++){
+                //Only update the value that are not currently in user focus
+                if(!($('#' + key + i).is(":focus"))){
+                    $('#' + key + i).val(voltages[i]);
+                }
+            }
+        }
+    }
+    //Update the GUI to reflect daughter statuses
+    for (i=0;i<8;i++){
+        if ($('#QuAD674DaughterType' + i).val()=="DAC") {
+            $('#QuAD674DaughterOutputMode' + i).attr("disabled", false);
+            $('#QuAD674DaughterRangeMode' + i).attr("disabled", false);
+            $('#QuAD674DaughterPositiveRail' + i).attr("disabled", false);
+            $('#QuAD674DaughterNegativeRail' + i).attr("disabled", false);
+            if ($('#QuAD674DaughterOutputMode' + i).val()=="Feedback") {
+                $('#QuAD674DaughterSource' + i).attr("disabled", false);
+                if ($('#QuAD674DaughterVoltage' + i).data('spinner')) {
+                    $('#QuAD674DaughterVoltage' + i).spinner("destroy");
+                }
+                $('#QuAD674DaughterVoltage' + i).attr("readonly", true);
+                $('#QuAD674DaughterVoltage' + i).addClass("textinput");
+            } else {
+                $('#QuAD674DaughterSource' + i).attr("disabled", true);
+                $('#QuAD674DaughterVoltage' + i).attr("readonly", false);
+                $('#QuAD674DaughterVoltage' + i).removeClass("textinput");
+                if (!$('#QuAD674DaughterVoltage' + i).data('spinner')) {
+                    $('#QuAD674DaughterVoltage' + i).spinner(voltage_spinner_options);
+                }
+            }
+        } else {
+            $('#QuAD674DaughterOutputMode' + i).attr("disabled", true);
+            $('#QuAD674DaughterRangeMode' + i).attr("disabled", true);
+            $('#QuAD674DaughterSource' + i).attr("disabled", true);
+            $('#QuAD674DaughterPositiveRail' + i).attr("disabled", true);
+            $('#QuAD674DaughterNegativeRail' + i).attr("disabled", true);
+            if ($('#QuAD674DaughterVoltage' + i).data('spinner')) {
+                $('#QuAD674DaughterVoltage' + i).spinner("destroy");
+            }
+            $('#QuAD674DaughterVoltage' + i).attr("readonly", true);
+            $('#QuAD674DaughterVoltage' + i).addClass("textinput");
+        }
+    }
+}
+
+function QuADPlotOscilloscope(data){
+    //$.plot($("#QuADPlot"), [ [[0, 0], [1, 1]] ], { yaxis: { max: 1 } });
+    
+    //Create the plot
+    plot=$.plot($('#ScopePlot'),[data],{
+        series: {
+            lines: {show: true, lineWidth: 1},
+            shadowSize: 0,
+            points: {show: true}},
+        colors: ["#0022ff"],
+        grid: {hoverable: false, clickable: false},
+        selection: {mode: "xy"},
+        yaxis: {
+            min: -1,
+            max: maxvoltage
+        }
+    });
+
+    //Bind an event to the plot
+    $("#ScopePlot").bind("plotselected", function (event, ranges) {
+        var axes=plot.getAxes(), xaxis=axes.xaxis.options,yaxis=axes.yaxis.options;
+        xaxis.min=ranges.xaxis.from;
+        xaxis.max=ranges.xaxis.to;
+        yaxis.min=ranges.yaxis.from;
+        yaxis.max=ranges.yaxis.to;
+
+        plot.setupGrid();
+        plot.draw();
+        plot.clearSelection();
+        $("#ScopePlot > input").remove(); // get rid of previous zoom button
+        $("<input type='button' style='position:absolute;right:20px;top:20px;' value='Zoom Out'>")
+            .appendTo($("#ScopePlot"))
+            .click(function (event) {
+                event.preventDefault();
+                var axes=plot.getAxes(), xaxis=axes.xaxis.options,yaxis=axes.yaxis.options;
+                xaxis.min=null;
+                xaxis.max=null;
+                yaxis.min=null;
+                yaxis.max=null;
+                plot.setupGrid();
+                plot.draw();
+                $(this).remove();
+        });
+    });
+
+    $("#ScopePlot").bind("plotpan", function (event, plot) {
+        var axes = plot.getAxes();
+        $(".message").html("Panning to x: "  + axes.xaxis.min.toFixed(2)
+          + " &ndash; " + axes.xaxis.max.toFixed(2)
+          + " and y: " + axes.yaxis.min.toFixed(2)
+          + " &ndash; " + axes.yaxis.max.toFixed(2));
+    });
+
+    $("#ScopePlot").bind("plotzoom", function (event, plot) {
+        var axes = plot.getAxes();
+        $(".message").html("Zooming to x: "  + axes.xaxis.min.toFixed(2)
+          + " &ndash; " + axes.xaxis.max.toFixed(2)
+          + " and y: " + axes.yaxis.min.toFixed(2)
+          + " &ndash; " + axes.yaxis.max.toFixed(2));
+    });
+}
+
+function updateOscilloscope(data) {
+    plot.setData(data);
+    plot.draw();
+}
+
+</script>
+
+<style>
+#ScopePlot {
+    width:1013px;
+    height:452px;
+    float:left;
+}
+#ScopeControl {
+    background-color:black;
+    color:white;
+    height:452px;
+    width:200px;
+    float:left;
+}
+</style>
+<div id=quad674table>
+</div>
+
+<h3>Oscilloscope View</h3><br>
+
+<!--<div id=ScopePlot></div>-->
+<div id=ScopeControl>
+    Volts/div:<br>
+    <input type="text" class=QuAD674ScopeControl name="voltsperdiv"><br>
+    Max:<br>
+    <input type="text" class=QuAD674ScopeControl id="maxvoltage"><br>
+    Time/div:<br>
+    <input type="text" class=QuAD674ScopeControl id="timeperdiv"><br>
+</div>
+
+</center>           

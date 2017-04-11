@@ -1,0 +1,79 @@
+<script type="text/javascript">
+$(function () {
+    $('.OvenField').spinner({
+        min: 0,
+        max: 2,
+        numberFormat: "n",
+        step: 0.01,
+        stop: function(){ // update device when spinner has stopped spinning 
+            if (window.goodKeystrokes.indexOf(event.which) != -1){
+                WebSocketSend("SET;AgilentBOUSB;" + this.id + " " + this.value); 
+            }
+        }
+
+    });
+            
+    $('#OvenDialog').find('.onoffswitch-checkbox').click(function(){
+        if(this.checked){
+            WebSocketSend("SET;AgilentBOUSB;" + this.id + " ON"); 
+        } else {
+            WebSocketSend("SET;AgilentBOUSB;" + this.id + " OFF"); 
+        }
+    });
+    
+});
+
+
+
+function AgilentBOUSBReceivedData(input){ // For both oven and Bfield
+    var string = input.split(";");
+    var data2=JSON.parse(string[3]);
+    for (var key in data2){
+        if(data2.hasOwnProperty(key) && !($('#' + key).is(":focus")) ){
+        $('#' + key).val(parseFloat(data2[key]).toFixed(3));
+        }
+    }
+    if(data2['OvenCurrentOP'] >= 0.1){
+        $('#OvenResistance').val((parseFloat(data2['OvenVoltageOP'])/parseFloat(data2['OvenCurrentOP'])).toFixed(3));
+    }
+    $('#OvenState').prop('checked', data2["OvenState"]);
+    $('#OvenState').trigger('change'); // Need to trigger event so shadow is added
+    $('#BPerpState').prop('checked', data2["BPerpState"]);
+    $('#BPerpState').trigger('change'); 
+    $('#BNormState').prop('checked', data2["BNormState"]);
+    $('#BNormState').trigger('change'); 
+    $('#BAxialState').prop('checked', data2["BAxialState"]);
+    $('#BAxialState').trigger('change'); 
+}
+</script>
+<table width=100% class="datatable">
+<tr>
+<td><label for="OvenCurrentOP">Op. C:</label></td><td><input id="OvenCurrentOP" value="0.00" readonly type=text title="operating current in amps">
+</td>
+<td>
+<label for="OvenVoltageOP">Op. V:</label></td><td><input id="OvenVoltageOP" value="0.00" readonly type=text title="operating voltage in volts">
+</td>
+
+</tr>
+<tr>
+<td>
+<label for="OvenCurrentLim">C Lim.:</label></td><td><input id="OvenCurrentLim" class="OvenField" value="0" style="display: inline;" title="current limit in amps"></td>
+</td>
+<td><label for="OvenVoltageLim">V Lim.:</label></td><td><input id="OvenVoltageLim" class="OvenField" value="0" style="display: inline;" title="voltage limit in volts"></td>
+</tr>
+<tr><td>
+<label for="OvenResistance">Op. R:</label></td><td><input id="OvenResistance" value="0.00" readonly type=text>
+</td>
+<th colspan=2>
+<center><div class="onoffswitch">
+                <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox" id="OvenState">
+                <label class="onoffswitch-label" for="OvenState">
+                    <span class="onoffswitch-inner"></span>
+                    <span class="onoffswitch-switch"></span>
+                </label>
+            </div></center>
+</th>
+
+</tr>
+
+</table>         

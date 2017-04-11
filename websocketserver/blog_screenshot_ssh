@@ -1,0 +1,22 @@
+#!/bin/sh
+
+dir="/Dropbox/Quanta/Data/"`date +%F`
+filename=`date +%F_%H_%M_%S`
+ssh -X X88@quanta-rabi.mit.edu << ENDSSH
+
+mkdir -p $dir
+cd $dir
+sleep 1
+export DISPLAY=:0
+xrandr --output DP-1 --brightness 1.5
+sleep 0.1
+xrandr --output DP-1 --brightness 1
+echo "taking screenshot"
+import -window root -crop 1920x1080 +repage screenshot_$filename.png
+rm screenshot_$filename-1.png
+
+
+#sudo su - www-data -c "env PATH=$PATH wp --path='/data/www/blog/' media import $dir/screenshot_$filename-0.png"
+ENDSSH
+
+exit 0
