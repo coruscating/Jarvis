@@ -3,9 +3,20 @@ JARVIS 1.0
 
 July-September 2014, Helena Zhang
 
-Your friendly neighborhood all-powerful data acquisition and monitoring suite.
+Your friendly neighborhood all-powerful device control and data acquisition suite.
 
 ![screenshot](screenshot.png)
+
+ABOUT
+-----
+
+Jarvis is a WebSocket-based interface for running a modern laboratory from anywhere with an Internet connection. For our purposes, it controls lasers and other devices for trapping ions, but it can be easily generalized to interface with any . Its central server, written in Python, communicates with any number of devices as well as end-users. The Javascript interface displays updates from devices and enables powerful scripts and logic for conditional data acquisition and control.
+
+A few examples of things we've done in Jarvis:
+- Automatically measure and log power of each laser
+- Constant monitoring whether lasers are at the right frequency, with a visual/audio alarm when they are not
+- Plot ion fluorescence as a function of parameters such as laser frequency and magnetic field
+- Automatically load an ion into our ion trap by controlling oven and laser powers/frequencies while monitoring fluorescence on the photon counter
 
 
 INSTALLATION
@@ -45,7 +56,7 @@ WIDGETS
 - Trap electrodes
 - Pulse programmer
 - Photon counter
-- Laser controller (Pichu)
+- Laser controller
 - Newport controller
 - Wavemeter
 - Power meter
@@ -148,7 +159,7 @@ TODO
 
 NOTES
 -----
-- Websocket connecting to 127.0.0.1 instead of the actual quanta-rabi IP leads to a weird frame containing cookie data upon connecting. Now that quanta-rabi is on a static IP, this should no longer be an issue. 
+- Websocket connecting to 127.0.0.1 instead of the actual server IP leads to a weird frame containing cookie data upon connecting. Running the server on a static IP prevents this issue. 
 
 SAMPLE OUTPUT FROM DEVICES
 ---------------------------
