@@ -3,12 +3,15 @@ JARVIS 1.0
 
 July-September 2014, Helena Zhang
 
-Your friendly neighborhood all-powerful data acquisition suite.
+Your friendly neighborhood all-powerful data acquisition and monitoring suite.
+
+![screenshot](screenshot.png)
+
 
 INSTALLATION
 ------------
 
-Clone the repository. Link `www/prog/` to the `prog/` directory under in DeviceWorkers. Point your web server to `Jarvis/www`. Start `websocketserver.py` under `websocketserver/`.
+Clone the repository, as well as the DeviceWorkers and MTServer repositories. Link `www/prog/` to the `prog/` directory under in DeviceWorkers. Point your web server to `Jarvis/www`. Start `websocketserver.py` under `websocketserver/`.
 
 
 FILES
